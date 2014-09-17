@@ -56,7 +56,7 @@ app.get('/api/users', function(req,res) {
       break;
     }
   }
-  res.send(user);
+  res.send({"user": user});
 });
 
 var server = app.listen(3000, function() {
