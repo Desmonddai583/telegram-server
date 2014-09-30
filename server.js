@@ -1,23 +1,15 @@
 var express = require('express');
 var bodyParser = require('body-parser');
-
+var passport = require('passport')
+, LocalStrategy = require('passport-local').Strategy
+var flash = require('connect-flash')
 var app = express();
 
-app.use(function (req, res, next) {
-  // Website you wish to allow to connect
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost.com');
-  // Request methods you wish to allow
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  // Request headers you wish to allow
-  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
-  // Set to true if you need the website to include cookies in the requests sent
-  // to the API (e.g. in case you use sessions)
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  // Pass to next layer of middleware
-  next();
-});
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(flash());
 
 var users = [
   {
@@ -61,25 +53,55 @@ var posts = [
       date: new Date(2014, 9, 1),
       author: 'linda',
     }
-  ]
+]
 
-app.get('/api/users', function(req,res) {
-  if (req.query.operation === 'login') {
-    username = req.query.id;
-    password = req.query.password;
-    var user = {};
-
-    for(var i=0; i < users.length; i++) {
-      if(users[i].id == username && users[i].password == password) {
-        user = users[i];
-        break;
-      }
+function findById(id, callback) {
+  for (var i = 0; i < users.length; i++) {
+    var user = users[i];
+    if (user.id === id) {
+      return callback(null, user);
     }
-    res.send({"users": [user]});
   }
-  else {
-    res.send({"users": users});
+  return callback(null, null);
+}
+
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+  findById(id, function(err, user) {
+    done(err, user);
+  });
+});
+
+passport.use(new LocalStrategy({
+    usernameField: 'id',
+    passwordField: 'password'
+  },
+  function(username, password, done) {
+      findById(username, function(err, user) {
+      if (err) { return done(err); }
+      if (!user) { return done(null, false, { message: 'Invalid credential, please check your username and password.' }); }
+      if (user.password != password) { return done(null, false, { message: 'Invalid credential, please check your username and password.' });}
+      return done(null, user);
+    })
   }
+));
+
+app.get('/api/users', function(req,res,next) {
+    if (req.query.operation === 'login') {
+      passport.authenticate('local', function(err, user, info) {
+        if (err) { return res.send(500); }
+        if (!user) { return res.send(400, info.message); } 
+        req.logIn(user, function(err) {
+          return res.send({"users": [user]});
+        }); 
+      })(req, res, next)
+    }
+    else {
+      res.send({"users": users});
+    }
 });
 
 app.get('/api/users/:user_id', function(req,res) {
@@ -97,6 +119,8 @@ app.post('/api/users/', function(req,res) {
   var object = req.body.user;
   var newUser = { id: object.id, password: object.password, name: object.name, email: object.email, photo: 'images/avatar1.png' }
   users.push(newUser);
+
+  res.send({user: newUser});
 });
 
 app.get('/api/posts', function(req,res) {
@@ -119,6 +143,8 @@ app.post('/api/posts/', function(req,res) {
   var object = req.body.post;
   var newPost = { id: posts.length + 1, body: object.body, date: Date.parse(object.date), author: object.author }
   posts.push(newPost);
+
+  res.send({post: newPost});
 });
 
 app.delete('/api/posts/:post_id', function(req,res) {
