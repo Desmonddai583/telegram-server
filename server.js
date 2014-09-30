@@ -2,11 +2,19 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var passport = require('passport')
 , LocalStrategy = require('passport-local').Strategy
-var flash = require('connect-flash')
+var flash = require('connect-flash');
+var session = require('express-session');
+var cookieParser = require('cookie-parser');
 var app = express();
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(cookieParser());
+app.use(session({ secret: 'keyboard cat',
+                  cookie: { maxAge: 60000 },
+                  saveUninitialized: true,
+                  resave: true
+                }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
