@@ -34,7 +34,7 @@ var users = [
     email: 'lindalam583@gmail.com',
     photo: 'images/avatar1.png',
   }
-]
+];
 
 var posts = [
     {
@@ -61,7 +61,9 @@ var posts = [
       date: new Date(2014, 9, 1),
       author: 'linda',
     }
-]
+];
+
+var posts_length = posts.length;
 
 function findById(id, callback) {
   for (var i = 0; i < users.length; i++) {
@@ -98,17 +100,25 @@ passport.use(new LocalStrategy({
 ));
 
 app.get('/api/users', function(req,res,next) {
-    if (req.query.operation === 'login') {
+    if (req.query.isAuthenticated) {
+      if(req.isAuthenticated()){
+        return res.status(200).send({users: [req.user]});
+      }
+      else{
+        return res.status(200).send({users: []});
+      }
+    }
+    else if (req.query.operation === 'login') {
       passport.authenticate('local', function(err, user, info) {
-        if (err) { return res.send(500); }
-        if (!user) { return res.send(400, info.message); } 
+        if (err) { return res.status(500).end(); }
+        if (!user) { return res.status(400).send(info.message); } 
         req.logIn(user, function(err) {
           return res.send({"users": [user]});
         }); 
       })(req, res, next)
     }
     else {
-      res.send({"users": users});
+      res.status(200).send({"users": users});
     }
 });
 
@@ -120,7 +130,7 @@ app.get('/api/users/:user_id', function(req,res) {
       break;
     }
   }
-  res.send({"user": user});
+  res.status(200).send({"user": user});
 });
 
 app.post('/api/users/', function(req,res) {
@@ -128,7 +138,7 @@ app.post('/api/users/', function(req,res) {
   var newUser = { id: object.id, password: object.password, name: object.name, email: object.email, photo: 'images/avatar1.png' }
   users.push(newUser);
 
-  res.send({user: newUser});
+  res.status(200).send({user: newUser});
 });
 
 app.get('/api/posts', function(req,res) {
@@ -140,28 +150,37 @@ app.get('/api/posts', function(req,res) {
         userPosts.push(posts[i]);
       }
     }
-    res.send({"posts": userPosts});
+    res.status(200).send({"posts": userPosts});
   } 
   else {
-    res.send({"posts": posts});
+    res.status(200).send({"posts": posts});
   }
 });
 
 app.post('/api/posts/', function(req,res) {
   var object = req.body.post;
-  var newPost = { id: posts.length + 1, body: object.body, date: Date.parse(object.date), author: object.author }
-  posts.push(newPost);
-
-  res.send({post: newPost});
+  if (req.user.id === object.author) {
+    var newPost = { id: posts_length + 1, body: object.body, date: Date.parse(object.date), author: object.author }
+    posts_length++;
+    posts.push(newPost);
+    res.status(200).send({post: newPost});
+  } else {
+    res.status(400).end();
+  }
 });
 
 app.delete('/api/posts/:post_id', function(req,res) {
   for(var i=0; i < posts.length; i++) {
-    if(posts[i].id == req.params.post_id) {
-      posts.splice(i, 1);
-      break;
+    if(posts[i].id === parseInt(req.params.post_id)) {
+      if (req.user.id === posts[i].author) {
+        posts.splice(i, 1);
+        break;
+      } else {
+        res.status(400).end();
+      }
     }
   }
+  res.status(200).end();
 });
 
 var server = app.listen(9000, function() {
