@@ -19,6 +19,47 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
 
+function findById(id, callback) {
+  for (var i = 0; i < users.length; i++) {
+    var user = users[i];
+    if (user.id === id) {
+      return callback(null, user);
+    }
+  }
+  return callback(null, null);
+}
+
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  return res.send(403);  
+}
+
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+  findById(id, function(err, user) {
+    done(err, user);
+  });
+});
+
+passport.use(new LocalStrategy({
+    usernameField: 'id',
+    passwordField: 'password'
+  },
+  function(username, password, done) {
+      findById(username, function(err, user) {
+      if (err) { return done(err); }
+      if (!user) { return done(null, false, { message: 'Invalid credential, please check your username and password.' }); }
+      if (user.password != password) { return done(null, false, { message: 'Invalid credential, please check your username and password.' });}
+      return done(null, user);
+    })
+  }
+));
+
 var users = [
   {
     id: 'desmond',
@@ -64,40 +105,6 @@ var posts = [
 ];
 
 var posts_length = posts.length;
-
-function findById(id, callback) {
-  for (var i = 0; i < users.length; i++) {
-    var user = users[i];
-    if (user.id === id) {
-      return callback(null, user);
-    }
-  }
-  return callback(null, null);
-}
-
-passport.serializeUser(function(user, done) {
-  done(null, user.id);
-});
-
-passport.deserializeUser(function(id, done) {
-  findById(id, function(err, user) {
-    done(err, user);
-  });
-});
-
-passport.use(new LocalStrategy({
-    usernameField: 'id',
-    passwordField: 'password'
-  },
-  function(username, password, done) {
-      findById(username, function(err, user) {
-      if (err) { return done(err); }
-      if (!user) { return done(null, false, { message: 'Invalid credential, please check your username and password.' }); }
-      if (user.password != password) { return done(null, false, { message: 'Invalid credential, please check your username and password.' });}
-      return done(null, user);
-    })
-  }
-));
 
 app.get('/api/users', function(req,res,next) {
     if (req.query.isAuthenticated) {
@@ -157,7 +164,7 @@ app.get('/api/posts', function(req,res) {
   }
 });
 
-app.post('/api/posts/', function(req,res) {
+app.post('/api/posts/', ensureAuthenticated, function(req,res) {
   var object = req.body.post;
   if (req.user.id === object.author) {
     var newPost = { id: posts_length + 1, body: object.body, date: Date.parse(object.date), author: object.author }
@@ -165,21 +172,27 @@ app.post('/api/posts/', function(req,res) {
     posts.push(newPost);
     res.status(200).send({post: newPost});
   } else {
-    res.status(400).end();
+    res.status(403).end();
   }
 });
 
-app.delete('/api/posts/:post_id', function(req,res) {
+app.delete('/api/posts/:post_id', ensureAuthenticated, function(req,res) {
   for(var i=0; i < posts.length; i++) {
     if(posts[i].id === parseInt(req.params.post_id)) {
       if (req.user.id === posts[i].author) {
         posts.splice(i, 1);
         break;
       } else {
-        res.status(400).end();
+        res.status(403).end();
       }
     }
   }
+  res.status(200).end();
+});
+
+app.get('/logout', function(req, res){
+  console.log('logout')
+  req.logout();
   res.status(200).end();
 });
 
