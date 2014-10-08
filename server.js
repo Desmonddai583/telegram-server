@@ -10,7 +10,7 @@ var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
-app.use(session({ secret: 'keyboard cat',
+app.use(session({ secret: 'desmond.dai',
                   cookie: { maxAge: 60000 },
                   saveUninitialized: true,
                   resave: true
@@ -33,7 +33,7 @@ function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next();
   }
-  return res.send(403);  
+  return res.status(403).end();  
 }
 
 passport.serializeUser(function(user, done) {
@@ -144,8 +144,9 @@ app.post('/api/users/', function(req,res) {
   var object = req.body.user;
   var newUser = { id: object.id, password: object.password, name: object.name, email: object.email, photo: 'images/avatar1.png' }
   users.push(newUser);
-
-  res.status(200).send({user: newUser});
+  req.logIn(newUser, function(err) {
+    return res.status(200).send({"users": [newUser]});
+  });
 });
 
 app.get('/api/posts', function(req,res) {
