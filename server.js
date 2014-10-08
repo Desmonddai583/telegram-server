@@ -5,6 +5,7 @@ var passport = require('passport')
 var flash = require('connect-flash');
 var session = require('express-session');
 var cookieParser = require('cookie-parser');
+var mongoose = require('mongoose');
 var app = express();
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -19,14 +20,24 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
 
+mongoose.connect('mongodb://localhost/telegram');
+
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function callback () {});
+
+var userSchema = mongoose.Schema({
+  id: String,
+  name: String,
+  password: String,
+  email: String,
+  photo: String
+});
+
+var User = mongoose.model('User', userSchema);
+
 function findById(id, callback) {
-  for (var i = 0; i < users.length; i++) {
-    var user = users[i];
-    if (user.id === id) {
-      return callback(null, user);
-    }
-  }
-  return callback(null, null);
+  User.findOne({'id': id}, callback);
 }
 
 function ensureAuthenticated(req, res, next) {
@@ -51,31 +62,14 @@ passport.use(new LocalStrategy({
     passwordField: 'password'
   },
   function(username, password, done) {
-      findById(username, function(err, user) {
+    findById(username, function(err, user) {
       if (err) { return done(err); }
       if (!user) { return done(null, false, { message: 'Invalid credential, please check your username and password.' }); }
       if (user.password != password) { return done(null, false, { message: 'Invalid credential, please check your username and password.' });}
       return done(null, user);
-    })
+    });
   }
 ));
-
-var users = [
-  {
-    id: 'desmond',
-    password: '098567',
-    name: 'Desmond Dai',
-    email: 'desmonddai583@gmail.com',
-    photo: 'images/avatar.png',
-  },
-  {
-    id: 'linda',
-    password: '098567',
-    name: 'Linda Ng',
-    email: 'lindalam583@gmail.com',
-    photo: 'images/avatar1.png',
-  }
-];
 
 var posts = [
     {
@@ -130,24 +124,19 @@ app.get('/api/users', function(req,res,next) {
 });
 
 app.get('/api/users/:user_id', function(req,res) {
-  var user;
-  for(var i=0; i < users.length; i++) {
-    if(users[i].id == req.params.user_id) {
-      user = users[i];
-      break;
-    }
-  }
-  if (user) {
+  findById(req.params.user_id, function(err, user) {
+    if (err) { return res.status(500).end(); }
+    if (!user) { return res.status(400).send("Can not found the user"); }
     res.status(200).send({"user": user});
-  } else {
-    res.status(404).end();
-  }
+  });
 });
 
 app.post('/api/users/', function(req,res) {
   var object = req.body.user;
-  var newUser = { id: object.id, password: object.password, name: object.name, email: object.email, photo: 'images/avatar1.png' }
-  users.push(newUser);
+  var newUser = new User({ id: object.id, password: object.password, name: object.name, email: object.email, photo: 'images/avatar1.png' });
+  newUser.save(function (err, user) {
+    if (err) return console.error(err);
+  });
   req.logIn(newUser, function(err) {
     return res.status(200).send({"users": [newUser]});
   });
