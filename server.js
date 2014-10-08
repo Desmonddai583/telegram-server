@@ -137,7 +137,11 @@ app.get('/api/users/:user_id', function(req,res) {
       break;
     }
   }
-  res.status(200).send({"user": user});
+  if (user) {
+    res.status(200).send({"user": user});
+  } else {
+    res.status(404).end();
+  }
 });
 
 app.post('/api/users/', function(req,res) {
@@ -188,11 +192,10 @@ app.delete('/api/posts/:post_id', ensureAuthenticated, function(req,res) {
       }
     }
   }
-  res.status(200).end();
+  res.status(200).send({});
 });
 
-app.get('/logout', function(req, res){
-  console.log('logout')
+app.get('/api/logout', function(req, res){
   req.logout();
   res.status(200).end();
 });
