@@ -88,13 +88,13 @@ var posts = [
       id: 3,
       body: 'This is a post test3! This is a post test3! This is a post test3!',
       date: new Date(2014, 9, 11),
-      author: 'linda',
+      author: 'desmond',
     },
     {
       id: 4,
       body: 'This is a post test4! This is a post test4! This is a post test4!',
       date: new Date(2014, 9, 1),
-      author: 'linda',
+      author: 'desmond',
     }
 ];
 
