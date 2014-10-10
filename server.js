@@ -31,7 +31,9 @@ var userSchema = mongoose.Schema({
   name: String,
   password: String,
   email: String,
-  photo: String
+  photo: String,
+  followers: {type: String, default: []},
+  following: {type: String, default: []}
 });
 
 var User = mongoose.model('User', userSchema);
@@ -103,10 +105,10 @@ var posts_length = posts.length;
 app.get('/api/users', function(req,res,next) {
     if (req.query.isAuthenticated) {
       if(req.isAuthenticated()){
-        return res.status(200).send({users: [req.user]});
+        return res.status(200).send({'users': [req.user]});
       }
       else{
-        return res.status(200).send({users: []});
+        return res.status(200).send({'users': []});
       }
     }
     else if (req.query.operation === 'login') {
@@ -114,12 +116,19 @@ app.get('/api/users', function(req,res,next) {
         if (err) { return res.status(500).end(); }
         if (!user) { return res.status(400).send(info.message); } 
         req.logIn(user, function(err) {
-          return res.send({"users": [user]});
+          return res.status(200).send({"users": [user]});
         }); 
       })(req, res, next)
     }
-    else {
-      res.status(200).send({"users": users});
+    else if (req.query.operation === 'followers') {
+      User.find({following: req.query.user}, function(err, followers){ 
+        res.status(200).send({'users': followers});
+      });
+    }
+    else if (req.query.operation === 'following') {
+      User.find({followers: req.query.user}, function(err, following){
+        res.status(200).send({'users': following});
+      });
     }
 });
 
@@ -140,6 +149,20 @@ app.post('/api/users/', function(req,res) {
   req.logIn(newUser, function(err) {
     return res.status(200).send({"users": [newUser]});
   });
+});
+
+app.post('/api/follow/', function(req,res) {
+  var follow = req.body.followingID;
+
+  User.update({id: req.user.id}, {$push: {following: follow}}, function(err){
+    if(err) { return console.log(err); }
+  });
+
+  User.update({id: follow}, {$push: {followers: req.user.id}}, function(err){
+    if(err) { return console.log(err); }
+  });
+
+  res.status(200).end();
 });
 
 app.get('/api/posts', function(req,res) {
