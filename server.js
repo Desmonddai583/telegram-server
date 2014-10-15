@@ -188,6 +188,10 @@ app.delete('/api/posts/:post_id', ensureAuthenticated, function(req,res) {
   })
 });
 
+app.post('/api/resetPassword/', function(req, res){
+  console.log(req.body.email)
+});
+
 app.get('/api/logout', function(req, res){
   req.logout();
   res.status(200).end();
