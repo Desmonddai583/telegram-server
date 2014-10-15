@@ -78,8 +78,14 @@ passport.use(new LocalStrategy({
     findById(username, function(err, user) {
       if (err) { return done(err); }
       if (!user) { return done(null, false, { message: 'Invalid credential, please check your username and password.' }); }
-      if (user.password != password) { return done(null, false, { message: 'Invalid credential, please check your username and password.' });}
-      return done(null, user);
+      bcrypt.compare(password, user.password, function(err, res) {
+        if (err) { return done(err); }
+        if (res) {
+          return done(null, user);
+        } else {
+          return done(null, false, { message: 'Invalid credential, please check your username and password.' });
+        }
+      });   
     });
   }
 ));
@@ -125,12 +131,16 @@ app.get('/api/users/:user_id', function(req,res) {
 app.post('/api/users/', function(req,res) {
   var object = req.body.user;
 
-  var newUser = new User({ id: object.id, password: object.password, name: object.name, email: object.email, photo: 'images/avatar1.png' });
-  newUser.save(function (err, user) {
-    if (err) return console.error(err);
-  });
-  req.logIn(newUser, function(err) {
-    return res.status(200).send({"users": [newUser]});
+  bcrypt.genSalt(10, function(err, salt) {
+    bcrypt.hash(object.password, salt, function(err, hash) {
+      var newUser = new User({ id: object.id, password: hash, name: object.name, email: object.email, photo: 'images/avatar1.png' });
+      newUser.save(function (err, user) {
+        if (err) return console.error(err);
+      });
+      req.logIn(newUser, function(err) {
+        return res.status(200).send({"users": [newUser]});
+      });
+    });
   });
 });
 
