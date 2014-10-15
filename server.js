@@ -7,6 +7,7 @@ var session = require('express-session');
 var cookieParser = require('cookie-parser');
 var mongoose = require('mongoose');
 var autoIncrement = require('mongoose-auto-increment');
+var bcrypt = require('bcrypt');
 var app = express();
 
 app.use(bodyParser.urlencoded({ extended: false }));
