@@ -109,7 +109,11 @@ app.get('/api/users', function(req,res,next) {
       })(req, res, next)
     }
     else if (req.query.operation === 'followers') {
-      User.find({following: req.query.user}, function(err, followers){ 
+      User.find({following: req.query.user}, '-password -followers -following', function(err, followers){
+        followers.forEach(function(user, index, self) {
+          self[index] = self[index].toObject();
+          self[index].isFollowCurrentUser = true;
+        }); 
         res.status(200).send({'users': followers});
       });
     }
@@ -136,9 +140,9 @@ app.post('/api/users/', function(req,res) {
       var newUser = new User({ id: object.id, password: hash, name: object.name, email: object.email, photo: 'images/avatar1.png' });
       newUser.save(function (err, user) {
         if (err) return console.error(err);
-      });
-      req.logIn(newUser, function(err) {
-        return res.status(200).send({"users": [newUser]});
+        req.logIn(newUser, function(err) {
+          return res.status(200).send({"users": [newUser]});
+        });
       });
     });
   });
