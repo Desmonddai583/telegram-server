@@ -109,16 +109,28 @@ app.get('/api/users', function(req,res,next) {
       })(req, res, next)
     }
     else if (req.query.operation === 'followers') {
-      User.find({following: req.query.user}, '-password -followers -following', function(err, followers){
+      User.find({following: req.query.user}, '-password', function(err, followers){
         followers.forEach(function(user, index, self) {
-          self[index] = self[index].toObject();
-          self[index].isFollowCurrentUser = true;
+          if (req.user) {
+            self[index] = self[index].toObject();
+            if (self[index].followers.indexOf(req.user.id) >= 0) {
+              self[index].isFollowedByCurrentUser = true;
+            }
+          }
         }); 
         res.status(200).send({'users': followers});
       });
     }
     else if (req.query.operation === 'following') {
-      User.find({followers: req.query.user}, function(err, following){
+      User.find({followers: req.query.user}, '-password', function(err, following){
+        following.forEach(function(user, index, self) {
+          if (req.user) {
+            self[index] = self[index].toObject();
+            if (self[index].followers.indexOf(req.user.id) >= 0) {
+              self[index].isFollowedByCurrentUser = true;
+            }
+          }
+        }); 
         res.status(200).send({'users': following});
       });
     }
@@ -128,6 +140,12 @@ app.get('/api/users/:user_id', function(req,res) {
   findById(req.params.user_id, function(err, user) {
     if (err) { return res.status(500).end(); }
     if (!user) { return res.status(400).send("Can not found the user"); }
+    if (req.user) {
+      user = user.toObject();
+      if (user.followers.indexOf(req.user.id) >= 0) {
+        user.isFollowedByCurrentUser = true;
+      }
+    }
     res.status(200).send({"user": user});
   });
 });
