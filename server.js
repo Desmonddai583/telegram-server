@@ -8,7 +8,12 @@ var cookieParser = require('cookie-parser');
 var mongoose = require('mongoose');
 var autoIncrement = require('mongoose-auto-increment');
 var bcrypt = require('bcrypt');
+var api_key = 'key-e2a50d6091c24a46f1a5d047ceebbae5';
+var domain = 'sandbox6cee921710e44a21ae485a9555b7229a.mailgun.org';
+var mailgun = require('mailgun-js')({apiKey: api_key, domain: domain});
+var md5 = require('MD5');
 var app = express();
+
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -210,9 +215,51 @@ app.delete('/api/posts/:post_id', ensureAuthenticated, function(req,res) {
   })
 });
 
-app.post('/api/resetPassword/', function(req, res){
-  console.log(req.body.email)
+app.post('/api/resetPassword/', function(req, res) {
+  User.findOne({email: req.body.email}, function(err, user){
+    if (err) return console.error(err);
+    if (!user) { return res.status(400).send("The user does not exist!"); }
+    var password = makePasswd(13, 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890');
+    var MD5Password = md5(password);
+
+    bcrypt.genSalt(10, function(err, salt) {
+      bcrypt.hash(MD5Password, salt, function(err, hash) {
+        User.findOneAndUpdate({email: req.body.email}, {$set: {password: hash}}, function(err, user){
+          var data = {
+            from: 'desmonddai583@gmail.com',
+            to: user.email,
+            subject: 'Reset Password',
+            html: "<body><p>Your new password is: <strong>" + password + "</strong></p></body>"
+          };
+          mailgun.messages().send(data, function(err, body) {
+            if (err) return console.error(err);
+            res.status(200).send({});
+          });
+        });
+      });
+    });    
+  });
+  // TODO 
+  // User.findOne({email: req.body.email}, function(err, user){
+  //   if (err) return console.error(err);
+  //   if (!user) { return res.status(400).send("The user does not exist!"); }
+  //   var data = {
+  //     from: 'desmonddai583@gmail.com',
+  //     to: user.email,
+  //     subject: 'Reset Password',
+  //     html: "<body><p>Please click the link below to reset your password:</p><p><a href='" + req.protocol + "://" + req.get('host') + "'>Reset My Password</a></p></body>"
+  //   };
+  //   mailgun.messages().send(data, function (err, body) {
+  //     if (err) return console.error(err);
+  //     console.log(body);
+  //   });
+  // });
 });
+
+function makePasswd(n, a) {
+  var index = (Math.random() * (a.length - 1)).toFixed(0);
+  return n > 0 ? a[index] + makePasswd(n - 1, a) : '';
+};
 
 app.get('/api/logout', function(req, res){
   req.logout();
