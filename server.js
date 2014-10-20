@@ -185,6 +185,20 @@ app.post('/api/follow/', function(req,res) {
   res.status(200).end();
 });
 
+app.post('/api/unfollow/', function(req,res) {
+  var unfollow = req.body.unfollowingID;
+
+  User.update({id: req.user.id}, {$pull: {following: unfollow}}, function(err){
+    if(err) { return console.log(err); }
+  });
+
+  User.update({id: unfollow}, {$pull: {followers: req.user.id}}, function(err){
+    if(err) { return console.log(err); }
+  });
+
+  res.status(200).end();
+});
+
 app.get('/api/posts', function(req,res) {
   if (req.query.operation === 'userPosts') {
     Post.find({author: req.query.author}).sort({'date':-1}).exec(function(err, posts){ 
