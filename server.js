@@ -147,7 +147,7 @@ app.get('/api/users/:user_id', function(req,res) {
     if (!user) { return res.status(400).send("Can not found the user"); }
     if (req.user) {
       user = user.toObject();
-      if (user.followers.indexOf(req.user.id) >= 0) {
+      if (user.followers && user.followers.indexOf(req.user.id) >= 0) {
         user.isFollowedByCurrentUser = true;
       }
     }
