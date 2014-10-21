@@ -118,7 +118,7 @@ app.get('/api/users', function(req,res,next) {
         followers.forEach(function(user, index, self) {
           if (req.user) {
             self[index] = self[index].toObject();
-            if (self[index].followers.indexOf(req.user.id) >= 0) {
+            if (self[index].followers && self[index].followers.indexOf(req.user.id) >= 0) {
               self[index].isFollowedByCurrentUser = true;
             }
           }
@@ -131,7 +131,7 @@ app.get('/api/users', function(req,res,next) {
         following.forEach(function(user, index, self) {
           if (req.user) {
             self[index] = self[index].toObject();
-            if (self[index].followers.indexOf(req.user.id) >= 0) {
+            if (self[index].followers && self[index].followers.indexOf(req.user.id) >= 0) {
               self[index].isFollowedByCurrentUser = true;
             }
           }
@@ -205,9 +205,15 @@ app.get('/api/posts', function(req,res) {
       res.status(200).send({'posts': posts});
     });
   } 
-  else {
-    Post.find().exec(function(err, posts){ 
-      res.status(200).send({'posts': posts});
+  else if (req.query.operation === 'dashboardPosts') {
+    User.find({followers: req.user.id}, function(err, users){
+      var userIds = [];
+      users.forEach(function(user) {
+        userIds.push(user.id);
+      });
+      Post.find({$or: [ {author: req.user.id}, {author: {$in: userIds}} ]}).sort({'date':-1}).exec(function(err, posts){ 
+        res.status(200).send({'posts': posts});
+      });
     });
   }
 });
