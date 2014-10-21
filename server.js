@@ -1,4 +1,5 @@
 var express = require('express');
+var async = require("async");
 var bodyParser = require('body-parser');
 var passport = require('passport')
 , LocalStrategy = require('passport-local').Strategy
@@ -13,7 +14,6 @@ var domain = 'sandbox6cee921710e44a21ae485a9555b7229a.mailgun.org';
 var mailgun = require('mailgun-js')({apiKey: api_key, domain: domain});
 var md5 = require('MD5');
 var app = express();
-
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
