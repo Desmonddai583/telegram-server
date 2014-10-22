@@ -45,8 +45,8 @@ var userSchema = mongoose.Schema({
   password: String,
   email: String,
   photo: String,
-  followers: {type: String, default: []},
-  following: {type: String, default: []}
+  followers: {type: [String], default: []},
+  following: {type: [String], default: []}
 });
 
 var postSchema = mongoose.Schema({
@@ -244,14 +244,10 @@ app.get('/api/posts', function(req,res) {
   } 
   else if (req.query.operation === 'dashboardPosts') {
     if (req.isAuthenticated()) {
-      User.find({followers: req.user.id}, function(err, users){
-        var userIds = [];
-        users.forEach(function(user) {
-          userIds.push(user.id);
-        });
-        Post.find({$or: [ {author: req.user.id}, {author: {$in: userIds}} ]}).sort({'date':-1}).exec(function(err, posts){ 
-          res.status(200).send({'posts': posts});
-        });
+      req.user.following.push(req.user.id)
+      var relatedUsers = req.user.following
+      Post.find({author: {$in: relatedUsers}}).sort({'date':-1}).exec(function(err, posts){ 
+        res.status(200).send({'posts': posts});
       });
     }
   }
