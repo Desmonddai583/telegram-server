@@ -58,12 +58,41 @@ function findById(id, callback) {
   User.findOne({'id': id}, callback);
 }
 
+function validateUser(user, password, callback) {
+  if (user) { 
+    bcrypt.compare(password, user.password, function(err, res) {
+      if (res) {
+        callback(null, user);
+      } else {
+        callback(null, false, { message: 'Invalid credential, please check your username and password.' });
+      }
+    });
+  } else {
+    callback(null, false, { message: 'Invalid credential, please check your username and password.' });
+  }  
+}
+
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next();
   }
   return res.status(403).end();  
 }
+
+function emberUser(user, current_user) {
+  var newUser = {id: user.id, name: user.name, photo: user.photo};
+  if (current_user) {
+    if (user.followers && user.followers.indexOf(current_user.id) >= 0) {
+      newUser.isFollowedByCurrentUser = true;
+    }
+  }
+  return newUser;
+}
+
+function makePasswd(n, a) {
+  var index = (Math.random() * (a.length - 1)).toFixed(0);
+  return n > 0 ? a[index] + makePasswd(n - 1, a) : '';
+};
 
 passport.serializeUser(function(user, done) {
   done(null, user.id);
@@ -80,17 +109,18 @@ passport.use(new LocalStrategy({
     passwordField: 'password'
   },
   function(username, password, done) {
-    findById(username, function(err, user) {
-      if (err) { return done(err); }
-      if (!user) { return done(null, false, { message: 'Invalid credential, please check your username and password.' }); }
-      bcrypt.compare(password, user.password, function(err, res) {
-        if (err) { return done(err); }
-        if (res) {
-          return done(null, user);
-        } else {
-          return done(null, false, { message: 'Invalid credential, please check your username and password.' });
-        }
-      });   
+    async.waterfall([
+      function(callback) {
+        findById(username, callback); 
+      },
+      function(user,callback) {
+        validateUser(user, password, callback);
+      }
+    ], function(err, user, info) {
+      if (err) {
+        return done(err);
+      }
+      return done(err, user, info);  
     });
   }
 ));
@@ -114,29 +144,21 @@ app.get('/api/users', function(req,res,next) {
       })(req, res, next)
     }
     else if (req.query.operation === 'followers') {
-      User.find({following: req.query.user}, '-password', function(err, followers){
-        followers.forEach(function(user, index, self) {
-          if (req.user) {
-            self[index] = self[index].toObject();
-            if (self[index].followers && self[index].followers.indexOf(req.user.id) >= 0) {
-              self[index].isFollowedByCurrentUser = true;
-            }
-          }
+      User.find({following: req.query.user}, function(err, followers){
+        var users = [];
+        followers.forEach(function(user) {
+          users.push(emberUser(user,req.user));
         }); 
-        res.status(200).send({'users': followers});
+        res.status(200).send({'users': users});
       });
     }
     else if (req.query.operation === 'following') {
-      User.find({followers: req.query.user}, '-password', function(err, following){
-        following.forEach(function(user, index, self) {
-          if (req.user) {
-            self[index] = self[index].toObject();
-            if (self[index].followers && self[index].followers.indexOf(req.user.id) >= 0) {
-              self[index].isFollowedByCurrentUser = true;
-            }
-          }
+      User.find({followers: req.query.user}, function(err, following){
+        var users = [];
+        following.forEach(function(user) {
+          users.push(emberUser(user,req.user));
         }); 
-        res.status(200).send({'users': following});
+        res.status(200).send({'users': users});
       });
     }
 });
@@ -174,29 +196,45 @@ app.post('/api/users/', function(req,res) {
 app.post('/api/follow/', function(req,res) {
   var follow = req.body.followingID;
 
-  User.update({id: req.user.id}, {$push: {following: follow}}, function(err){
-    if(err) { return console.log(err); }
+  async.parallel([
+    function(callback) {
+     User.update({id: req.user.id}, {$push: {following: follow}}, function(err){
+      if(err) { return console.log(err); }
+      callback(err);
+     });     
+    },
+    function(callback) {
+     User.update({id: follow}, {$push: {followers: req.user.id}}, function(err){
+      if(err) { return console.log(err); }
+      callback(err);
+     });   
+    }
+  ], function(err) {
+    if (err) return res.status(500).end();
+    res.status(200).end();
   });
-
-  User.update({id: follow}, {$push: {followers: req.user.id}}, function(err){
-    if(err) { return console.log(err); }
-  });
-
-  res.status(200).end();
 });
 
 app.post('/api/unfollow/', function(req,res) {
   var unfollow = req.body.unfollowingID;
 
-  User.update({id: req.user.id}, {$pull: {following: unfollow}}, function(err){
-    if(err) { return console.log(err); }
+  async.parallel([
+    function(callback) {
+      User.update({id: req.user.id}, {$pull: {following: unfollow}}, function(err){
+        if(err) { return console.log(err); }
+        callback(err);
+      });  
+    },
+    function(callback) {
+      User.update({id: unfollow}, {$pull: {followers: req.user.id}}, function(err){
+        if(err) { return console.log(err); }
+        callback(err);
+      }); 
+    }
+  ], function(err) {
+    if (err) return res.status(500).end();
+    res.status(200).end();
   });
-
-  User.update({id: unfollow}, {$pull: {followers: req.user.id}}, function(err){
-    if(err) { return console.log(err); }
-  });
-
-  res.status(200).end();
 });
 
 app.get('/api/posts', function(req,res) {
@@ -206,15 +244,17 @@ app.get('/api/posts', function(req,res) {
     });
   } 
   else if (req.query.operation === 'dashboardPosts') {
-    User.find({followers: req.user.id}, function(err, users){
-      var userIds = [];
-      users.forEach(function(user) {
-        userIds.push(user.id);
+    if (req.isAuthenticated()) {
+      User.find({followers: req.user.id}, function(err, users){
+        var userIds = [];
+        users.forEach(function(user) {
+          userIds.push(user.id);
+        });
+        Post.find({$or: [ {author: req.user.id}, {author: {$in: userIds}} ]}).sort({'date':-1}).exec(function(err, posts){ 
+          res.status(200).send({'posts': posts});
+        });
       });
-      Post.find({$or: [ {author: req.user.id}, {author: {$in: userIds}} ]}).sort({'date':-1}).exec(function(err, posts){ 
-        res.status(200).send({'posts': posts});
-      });
-    });
+    }
   }
 });
 
@@ -259,27 +299,7 @@ app.post('/api/resetPassword/', function(req, res) {
       });
     });    
   });
-  // TODO 
-  // User.findOne({email: req.body.email}, function(err, user){
-  //   if (err) return console.error(err);
-  //   if (!user) { return res.status(400).send("The user does not exist!"); }
-  //   var data = {
-  //     from: 'desmonddai583@gmail.com',
-  //     to: user.email,
-  //     subject: 'Reset Password',
-  //     html: "<body><p>Please click the link below to reset your password:</p><p><a href='" + req.protocol + "://" + req.get('host') + "'>Reset My Password</a></p></body>"
-  //   };
-  //   mailgun.messages().send(data, function (err, body) {
-  //     if (err) return console.error(err);
-  //     console.log(body);
-  //   });
-  // });
 });
-
-function makePasswd(n, a) {
-  var index = (Math.random() * (a.length - 1)).toFixed(0);
-  return n > 0 ? a[index] + makePasswd(n - 1, a) : '';
-};
 
 app.get('/api/logout', function(req, res){
   req.logout();
