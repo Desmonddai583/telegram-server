@@ -13,7 +13,12 @@ var api_key = 'key-e2a50d6091c24a46f1a5d047ceebbae5';
 var domain = 'sandbox6cee921710e44a21ae485a9555b7229a.mailgun.org';
 var mailgun = require('mailgun-js')({apiKey: api_key, domain: domain});
 var md5 = require('MD5');
+var fs = require('fs');
+var jade = require('jade');
 var app = express();
+
+app.set('view engine', 'jade');
+app.set('views', __dirname + "/views" );
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -139,7 +144,7 @@ app.get('/api/users', function(req,res,next) {
         if (err) { return res.status(500).end(); }
         if (!user) { return res.status(400).send(info.message); } 
         req.logIn(user, function(err) {
-          return res.status(200).send({"users": [user]});
+          return res.status(200).send({"users": [emberUser(user)]});
         }); 
       })(req, res, next)
     }
@@ -167,13 +172,7 @@ app.get('/api/users/:user_id', function(req,res) {
   findById(req.params.user_id, function(err, user) {
     if (err) { return res.status(500).end(); }
     if (!user) { return res.status(400).send("Can not found the user"); }
-    if (req.user) {
-      user = user.toObject();
-      if (user.followers && user.followers.indexOf(req.user.id) >= 0) {
-        user.isFollowedByCurrentUser = true;
-      }
-    }
-    res.status(200).send({"user": user});
+    res.status(200).send({"user": emberUser(user,req.user)});
   });
 });
 
@@ -186,7 +185,7 @@ app.post('/api/users/', function(req,res) {
       newUser.save(function (err, user) {
         if (err) return console.error(err);
         req.logIn(newUser, function(err) {
-          return res.status(200).send({"users": [newUser]});
+          return res.status(200).send({"users": [emberUser(newUser)]});
         });
       });
     });
@@ -282,22 +281,34 @@ app.post('/api/resetPassword/', function(req, res) {
     var password = makePasswd(13, 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890');
     var MD5Password = md5(password);
 
-    bcrypt.genSalt(10, function(err, salt) {
-      bcrypt.hash(MD5Password, salt, function(err, hash) {
-        User.findOneAndUpdate({email: req.body.email}, {$set: {password: hash}}, function(err, user){
-          var data = {
-            from: 'desmonddai583@gmail.com',
-            to: user.email,
-            subject: 'Reset Password',
-            html: "<body><p>Your new password is: <strong>" + password + "</strong></p></body>"
-          };
-          mailgun.messages().send(data, function(err, body) {
-            if (err) return console.error(err);
-            res.status(200).send({});
-          });
+    async.waterfall([
+      function(callback) {
+        bcrypt.genSalt(10, callback);
+      },
+      function(salt, callback) {
+        bcrypt.hash(MD5Password, salt, callback);
+      },
+      function(hash, callback) {
+        User.findOneAndUpdate({email: req.body.email}, {$set: {password: hash}}, callback);
+      },
+    ], function(err, user) {
+      fs.readFile('views/send_reset_password.jade', 'utf8', function (err, data) {
+        if (err) throw err;
+        var fn = jade.compile(data);
+        var html = fn({password: password});
+
+        var data = {
+          from: 'desmonddai583@gmail.com',
+          to: user.email,
+          subject: 'Reset Password',
+          html: html
+        };
+        mailgun.messages().send(data, function(err, body) {
+          if (err) return console.error(err);
+          res.status(200).send({});
         });
-      });
-    });    
+      });      
+    });  
   });
 });
 
