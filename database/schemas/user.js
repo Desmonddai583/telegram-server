@@ -8,6 +8,7 @@ user.userSchema = mongoose.Schema({
   password: String,
   email: String,
   photo: String,
+  token: String,
   followers: {type: [String], default: []},
   following: {type: [String], default: []}
 });
