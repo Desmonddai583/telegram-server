@@ -1,7 +1,7 @@
 var routes = exports;
 
-routes.generateRoutes = function(app) {
-  require('./users')(app)
-  require('./posts')(app)
-  require('./auth')(app)
+module.exports = function(app) {
+  app.use('/api/users', require('./users'));
+  app.use('/api/posts', require('./posts'));
+  app.use('/api/auth', require('./auth'));
 }
