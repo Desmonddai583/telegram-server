@@ -1,5 +1,6 @@
 var mongoose = require('mongoose');
 var bcrypt = require('bcrypt');
+var passport = require('passport')
 var User = mongoose.model('User');
 
 var userUtil = exports;
@@ -42,4 +43,43 @@ userUtil.emberUser = function(user, current_user) {
 userUtil.generateToken = function(n, a) {
   var index = (Math.random() * (a.length - 1)).toFixed(0);
   return n > 0 ? a[index] + userUtil.generateToken(n - 1, a) : '';
+};
+
+userUtil.handleLoginRequest = function(req, res, next) {
+  passport.authenticate('local', function(err, user, info) {
+    if (err) { return res.status(500).end(); }
+    if (!user) { return res.status(400).send(info.message); } 
+    req.logIn(user, function(err) {
+      return res.status(200).send({"users": [userUtil.emberUser(user)]});
+    }); 
+  })(req, res, next)
+};
+
+userUtil.handleAuthRequest = function(req, res) {
+  if(req.isAuthenticated()){
+    return res.status(200).send({'users': [req.user]});
+  }
+  else{
+    return res.status(200).send({'users': []});
+  }
+};
+
+userUtil.handleFollowersRequest = function(req, res) {
+  User.find({following: req.query.user}, function(err, followers){
+    var users = [];
+    followers.forEach(function(user) {
+      users.push(userUtil.emberUser(user,req.user));
+    }); 
+    res.status(200).send({'users': users});
+  });
+};
+
+userUtil.handleFollowingRequest = function(req, res) {
+  User.find({followers: req.query.user}, function(err, following){
+    var users = [];
+    following.forEach(function(user) {
+      users.push(userUtil.emberUser(user,req.user));
+    }); 
+    res.status(200).send({'users': users});
+  });
 };

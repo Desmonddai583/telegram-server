@@ -9,39 +9,16 @@ var User = mongoose.model('User');
 
 router.get('/', function(req,res,next) {
     if (req.query.isAuthenticated) {
-      if(req.isAuthenticated()){
-        return res.status(200).send({'users': [req.user]});
-      }
-      else{
-        return res.status(200).send({'users': []});
-      }
+      userUtil.handleAuthRequest(req,res);
     }
     else if (req.query.operation === 'login') {
-      passport.authenticate('local', function(err, user, info) {
-        if (err) { return res.status(500).end(); }
-        if (!user) { return res.status(400).send(info.message); } 
-        req.logIn(user, function(err) {
-          return res.status(200).send({"users": [userUtil.emberUser(user)]});
-        }); 
-      })(req, res, next)
+      userUtil.handleLoginRequest(req,res,next);
     }
     else if (req.query.operation === 'followers') {
-      User.find({following: req.query.user}, function(err, followers){
-        var users = [];
-        followers.forEach(function(user) {
-          users.push(userUtil.emberUser(user,req.user));
-        }); 
-        res.status(200).send({'users': users});
-      });
+      userUtil.handleFollowersRequest(req,res);
     }
     else if (req.query.operation === 'following') {
-      User.find({followers: req.query.user}, function(err, following){
-        var users = [];
-        following.forEach(function(user) {
-          users.push(userUtil.emberUser(user,req.user));
-        }); 
-        res.status(200).send({'users': users});
-      });
+      userUtil.handleFollowingRequest(req,res);
     }
 });
 
