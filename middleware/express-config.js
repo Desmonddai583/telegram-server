@@ -6,9 +6,7 @@ var passport = require('passport');
 var jade = require('jade');
 var app = express();
 
-var expressConfig = exports;
-
-expressConfig.initializeConfig = function(app) {
+module.exports = function(app) {
   app.set('view engine', 'jade');
   app.set('views', __dirname + "/views" );
 
@@ -22,4 +20,5 @@ expressConfig.initializeConfig = function(app) {
                   }));
   app.use(passport.initialize());
   app.use(passport.session());
+  return app;
 }

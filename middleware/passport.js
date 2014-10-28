@@ -3,9 +3,7 @@ var async = require("async");
 var LocalStrategy = require('passport-local').Strategy;
 var userUtil = require('../utils/user-utils');
 
-var passportConfig = exports;
-
-passportConfig.initializePassportConfig = function() {
+module.exports = function() {
   passport.serializeUser(function(user, done) {
     done(null, user.id);
   });
@@ -36,4 +34,5 @@ passportConfig.initializePassportConfig = function() {
       });
     }
   ));  
+  return passport;
 }
