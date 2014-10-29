@@ -24,7 +24,7 @@ router.get('/', function(req,res) {
 router.post('/', userUtil.ensureAuthenticated, function(req,res) {
   var object = req.body.post;
 
-  var newPost = new Post({ body: object.body, author: object.author });
+  var newPost = new Post({ body: object.body, author: object.author, originalAuthor: object.originalAuthor });
   newPost.save(function (err, post) {
     if (err) return console.error(err);
     res.status(200).send({'post': post});
