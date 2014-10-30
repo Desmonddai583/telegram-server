@@ -49,8 +49,12 @@ function handleDashboardPostsRequest(req, res) {
     req.user.following.push(req.user.id)
     var relatedUsers = req.user.following
     User.find({id: {$in: relatedUsers}}, function(err, users) {
-      Post.find({author: {$in: relatedUsers}}).sort({'date':-1}).exec(function(err, posts){ 
-        res.status(200).send({'posts': posts, 'users': users});
+      Post.find({author: {$in: relatedUsers}}).sort({'date':-1}).exec(function(err, posts) { 
+        var newUsers = [];
+        users.forEach(function(user) {
+          newUsers.push(userUtil.emberUser(user,req.user));
+        }); 
+        res.status(200).send({'posts': posts, 'users': newUsers});
       });    
     });
   }
