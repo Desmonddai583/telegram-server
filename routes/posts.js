@@ -3,6 +3,7 @@ var router = express.Router();
 var mongoose = require('mongoose');
 var userUtil = require('../utils/user-utils');
 var Post = mongoose.model('Post');
+var User = mongoose.model('User');
 
 router.get('/', function(req,res) {
   if (req.query.operation === 'userPosts') {
@@ -47,8 +48,10 @@ function handleDashboardPostsRequest(req, res) {
   if (req.isAuthenticated()) {
     req.user.following.push(req.user.id)
     var relatedUsers = req.user.following
-    Post.find({author: {$in: relatedUsers}}).sort({'date':-1}).exec(function(err, posts){ 
-      res.status(200).send({'posts': posts});
+    User.find({id: {$in: relatedUsers}}, function(err, users) {
+      Post.find({author: {$in: relatedUsers}}).sort({'date':-1}).exec(function(err, posts){ 
+        res.status(200).send({'posts': posts, 'users': users});
+      });    
     });
   }
 };
