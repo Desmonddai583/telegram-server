@@ -1,4 +1,5 @@
 var express = require('express');
+var nconf = require('./nconf-config');
 var bodyParser = require('body-parser');
 var session = require('express-session');
 var MongoStore = require('connect-mongostore')(session);
@@ -18,7 +19,7 @@ module.exports = function(app) {
                     cookie: { maxAge: 100000 },
                     saveUninitialized: true,
                     resave: true,
-                    store: new MongoStore({'db': 'telegram-sessions'})
+                    store: new MongoStore({'db': nconf.get('mongoStore:database')})
                   }));
   app.use(passport.initialize());
   app.use(passport.session());

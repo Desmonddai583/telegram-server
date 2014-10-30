@@ -1,9 +1,10 @@
-var passport = require('passport');
 var async = require("async");
+var bcrypt = require('bcrypt');
 var LocalStrategy = require('passport-local').Strategy;
 var userUtil = require('../utils/user-utils');
 
-module.exports = function() {
+function initPassport() {
+  var passport = require('passport');
   passport.serializeUser(function(user, done) {
     done(null, user.id);
   });
@@ -24,7 +25,7 @@ module.exports = function() {
           userUtil.findById(username, callback); 
         },
         function(user,callback) {
-          userUtil.validateUser(user, password, callback);
+          validateUser(user, password, callback);
         }
       ], function(err, user, info) {
         if (err) {
@@ -36,3 +37,19 @@ module.exports = function() {
   ));  
   return passport;
 }
+
+function validateUser(user, password, callback) {
+  if (user) { 
+    bcrypt.compare(password, user.password, function(err, res) {
+      if (res) {
+        callback(null, user);
+      } else {
+        callback(null, false, { message: 'Invalid credential, please check your username and password.' });
+      }
+    });
+  } else {
+    callback(null, false, { message: 'Invalid credential, please check your username and password.' });
+  }  
+}
+
+module.exports = initPassport();

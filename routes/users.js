@@ -8,18 +8,20 @@ var userUtil = require('../utils/user-utils');
 var User = mongoose.model('User');
 
 router.get('/', function(req,res,next) {
-    if (req.query.isAuthenticated) {
-      userUtil.handleAuthRequest(req,res);
-    }
-    else if (req.query.operation === 'login') {
-      userUtil.handleLoginRequest(req,res,next);
-    }
-    else if (req.query.operation === 'followers') {
-      userUtil.handleFollowersRequest(req,res);
-    }
-    else if (req.query.operation === 'following') {
-      userUtil.handleFollowingRequest(req,res);
-    }
+  switch (req.query.operation) {
+    case 'isAuthenticated':
+      handleAuthRequest(req,res);
+      break;
+    case 'login':
+      handleLoginRequest(req,res,next);
+      break;
+    case 'followers':
+      handleFollowersRequest(req,res);
+      break;
+    case 'following':
+      handleFollowingRequest(req,res);
+      break;
+  }
 });
 
 router.get('/:user_id', function(req,res) {
@@ -33,14 +35,12 @@ router.get('/:user_id', function(req,res) {
 router.post('/', function(req,res) {
   var object = req.body.user;
 
-  bcrypt.genSalt(10, function(err, salt) {
-    bcrypt.hash(object.password, salt, function(err, hash) {
-      var newUser = new User({ id: object.id, password: hash, name: object.name, email: object.email, photo: 'images/avatar1.png' });
-      newUser.save(function (err, user) {
-        if (err) return console.error(err);
-        req.logIn(newUser, function(err) {
-          return res.status(200).send({"users": [userUtil.emberUser(newUser)]});
-        });
+  userUtil.hashPassword(object, function(err, hash) {
+    var newUser = new User({ id: object.id, password: hash, name: object.name, email: object.email, photo: 'images/avatar1.png' });
+    newUser.save(function (err, user) {
+      if (err) return console.error(err);
+      req.logIn(newUser, function(err) {
+        return res.status(200).send({"users": [userUtil.emberUser(newUser)]});
       });
     });
   });
@@ -48,7 +48,56 @@ router.post('/', function(req,res) {
 
 router.post('/follow', function(req,res) {
   var follow = req.body.followingID;
+  
+  handlerFollowUserRequest(req,res,follow);
+});
 
+router.post('/unfollow', function(req,res) {
+  var unfollow = req.body.unfollowingID;
+
+  handlerUnFollowUserRequest(req,res,unfollow);
+});
+
+function handleLoginRequest(req, res, next) {
+  passport.authenticate('local', function(err, user, info) {
+    if (err) { return res.status(500).end(); }
+    if (!user) { return res.status(400).send(info.message); } 
+    req.logIn(user, function(err) {
+      return res.status(200).send({"users": [userUtil.emberUser(user)]});
+    }); 
+  })(req, res, next)
+}
+
+function handleAuthRequest(req, res) {
+  if(req.isAuthenticated()){
+    return res.status(200).send({'users': [req.user]});
+  }
+  else{
+    return res.status(200).send({'users': []});
+  }
+}
+
+function handleFollowersRequest(req, res) {
+  User.find({following: req.query.user}, function(err, followers){
+    var users = [];
+    followers.forEach(function(user) {
+      users.push(userUtil.emberUser(user,req.user));
+    }); 
+    res.status(200).send({'users': users});
+  });
+}
+
+function handleFollowingRequest(req, res) {
+  User.find({followers: req.query.user}, function(err, following){
+    var users = [];
+    following.forEach(function(user) {
+      users.push(userUtil.emberUser(user,req.user));
+    }); 
+    res.status(200).send({'users': users});
+  });
+}
+
+function handlerFollowUserRequest(req,res,follow) {
   async.parallel([
     function(callback) {
      User.update({id: req.user.id}, {$push: {following: follow}}, function(err){
@@ -66,11 +115,9 @@ router.post('/follow', function(req,res) {
     if (err) return res.status(500).end();
     res.status(200).end();
   });
-});
+}
 
-router.post('/unfollow', function(req,res) {
-  var unfollow = req.body.unfollowingID;
-
+function handlerUnFollowUserRequest(req,res,unfollow) {
   async.parallel([
     function(callback) {
       User.update({id: req.user.id}, {$pull: {following: unfollow}}, function(err){
@@ -88,6 +135,6 @@ router.post('/unfollow', function(req,res) {
     if (err) return res.status(500).end();
     res.status(200).end();
   });
-});
+}
 
 module.exports = router;
