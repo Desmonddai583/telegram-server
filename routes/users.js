@@ -113,7 +113,7 @@ function handlerFollowUserRequest(req,res,follow) {
     }
   ], function(err) {
     if (err) return res.status(500).end();
-    res.status(200).end();
+    res.status(200).send({});
   });
 }
 
@@ -133,7 +133,7 @@ function handlerUnFollowUserRequest(req,res,unfollow) {
     }
   ], function(err) {
     if (err) return res.status(500).end();
-    res.status(200).end();
+    res.status(200).send({});
   });
 }
 
