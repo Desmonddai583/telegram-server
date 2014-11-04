@@ -13,5 +13,8 @@
   },
   "client": {
     "host": "localhost.com"
+  },
+  "stripe": {
+    "secret-key": "sk_test_ZaKKJ9YpgJPwIZRBGIoYQUXY"
   }
 }
