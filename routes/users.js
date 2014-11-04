@@ -86,7 +86,7 @@ router.post('/upgrade_token', function(req,res) {
   ], function(err,result) {
     console.log(err)
     console.log(result)
-    if (err) return res.status(500).end();
+    if (err) return res.status(500).send(err.message);
     User.update({id: req.user.id}, {$set: {stripeToken: upgrade_token, isPro: true}}, function(err){
       if(err) { return console.log(err); }
       res.status(200).send({});
