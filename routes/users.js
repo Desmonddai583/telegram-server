@@ -67,6 +67,10 @@ router.post('/upgrade_account', function(req,res) {
   handlerUpgradeAccountRequest(req,res,upgrade_token,account_email);
 });
 
+router.post('/downgrade_account', function(req,res) {
+  handlerDowngradeAccountRequest(req,res);
+});
+
 function handleLoginRequest(req, res, next) {
   passport.authenticate('local', function(err, user, info) {
     if (err) { return res.status(500).end(); }
@@ -153,7 +157,8 @@ function handlerUpgradeAccountRequest(req,res,upgrade_token,account_email) {
         description: 'Customer for ' + account_email,
         card: upgrade_token 
       }, function(err, customer) {
-        callback(null, customer.id);
+        if(err) { return console.log(err); }
+        callback(err, customer.id);
       });
     },
     function(customer_id, callback) {
@@ -161,17 +166,42 @@ function handlerUpgradeAccountRequest(req,res,upgrade_token,account_email) {
         customer_id,
         {plan: 'Pro'},
         function(err, subscription) {
-          callback(null, subscription.customer);
+          if(err) { return console.log(err); }
+          callback(err, subscription.customer);
         }
       );
     },
     function(customer_id, callback) {
       User.update({id: req.user.id}, {$set: {stripeCustomerID: customer_id, isPro: true}}, function(err){
-        callback(null);
+        if(err) { return console.log(err); }
+        callback(err);
       });
     }
   ], function(err) {
     if (err) return res.status(500).send(err.message);
+    res.status(200).send({});
+  });
+}
+
+function handlerDowngradeAccountRequest(req,res) {
+  async.parallel([
+    function(callback) {
+      stripe.customers.del(
+        req.user.stripeCustomerID,
+        function(err) {
+          if(err) { return console.log(err); }
+          callback(err)
+        }
+      );
+    },
+    function(callback) {
+      User.update({id: req.user.id}, {$set: {stripeCustomerID: null, isPro: false}}, function(err){
+        if(err) { return console.log(err); }
+        callback(err);
+      }); 
+    }
+  ], function(err) {
+    if (err) return res.status(500).end(err.message);
     res.status(200).send({});
   });
 }

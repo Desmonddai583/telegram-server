@@ -9,7 +9,7 @@ userUtil.findById = function(id, callback) {
 }
 
 userUtil.emberUser = function(user, current_user) {
-  var newUser = {id: user.id, name: user.name, photo: user.photo};
+  var newUser = {id: user.id, name: user.name, photo: user.photo, isPro: user.isPro};
   if (current_user) {
     if (user.followers && user.followers.indexOf(current_user.id) >= 0) {
       newUser.isFollowedByCurrentUser = true;
