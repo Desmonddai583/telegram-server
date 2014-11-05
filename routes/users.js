@@ -64,33 +64,33 @@ router.post('/upgrade_token', function(req,res) {
   var upgrade_token = req.body.token;
   var account_email = req.body.email;
 
-  async.series([
+
+  async.waterfall([
     function(callback) {
       stripe.customers.create({
         description: 'Customer for ' + account_email,
         card: upgrade_token 
       }, function(err, customer) {
-        callback(err, customer);
+        callback(null, customer.id);
       });
     },
-    function(callback) {
-      stripe.charges.create({
-        amount: 500,
-        currency: "usd",
-        card: upgrade_token, 
-        description: "Charge for " + account_email
-      }, function(err, charge) {
-        callback(err, charge);
+    function(customer_id, callback) {
+      stripe.customers.createSubscription(
+        customer_id,
+        {plan: 'Pro'},
+        function(err, subscription) {
+          callback(null, subscription.customer);
+        }
+      );
+    },
+    function(customer_id, callback) {
+      User.update({id: req.user.id}, {$set: {stripeCustomerID: customer_id, isPro: true}}, function(err){
+        callback(null);
       });
     }
-  ], function(err,result) {
-    console.log(err)
-    console.log(result)
+  ], function(err) {
     if (err) return res.status(500).send(err.message);
-    User.update({id: req.user.id}, {$set: {stripeToken: upgrade_token, isPro: true}}, function(err){
-      if(err) { return console.log(err); }
-      res.status(200).send({});
-    }); 
+    res.status(200).send({});
   });
 });
 

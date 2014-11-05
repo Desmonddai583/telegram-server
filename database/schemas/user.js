@@ -8,7 +8,7 @@ module.exports = mongoose.Schema({
   photo: String,
   token: String,
   isPro: { type: Boolean, default: false },
-  stripeToken: String,
+  stripeCustomerID: String,
   followers: {type: [String], default: []},
   following: {type: [String], default: []}
 });
