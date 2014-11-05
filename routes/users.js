@@ -60,38 +60,11 @@ router.post('/unfollow', function(req,res) {
   handlerUnFollowUserRequest(req,res,unfollow);
 });
 
-router.post('/upgrade_token', function(req,res) {
+router.post('/upgrade_account', function(req,res) {
   var upgrade_token = req.body.token;
   var account_email = req.body.email;
 
-
-  async.waterfall([
-    function(callback) {
-      stripe.customers.create({
-        description: 'Customer for ' + account_email,
-        card: upgrade_token 
-      }, function(err, customer) {
-        callback(null, customer.id);
-      });
-    },
-    function(customer_id, callback) {
-      stripe.customers.createSubscription(
-        customer_id,
-        {plan: 'Pro'},
-        function(err, subscription) {
-          callback(null, subscription.customer);
-        }
-      );
-    },
-    function(customer_id, callback) {
-      User.update({id: req.user.id}, {$set: {stripeCustomerID: customer_id, isPro: true}}, function(err){
-        callback(null);
-      });
-    }
-  ], function(err) {
-    if (err) return res.status(500).send(err.message);
-    res.status(200).send({});
-  });
+  handlerUpgradeAccountRequest(req,res,upgrade_token,account_email);
 });
 
 function handleLoginRequest(req, res, next) {
@@ -169,6 +142,36 @@ function handlerUnFollowUserRequest(req,res,unfollow) {
     }
   ], function(err) {
     if (err) return res.status(500).end();
+    res.status(200).send({});
+  });
+}
+
+function handlerUpgradeAccountRequest(req,res,upgrade_token,account_email) {
+  async.waterfall([
+    function(callback) {
+      stripe.customers.create({
+        description: 'Customer for ' + account_email,
+        card: upgrade_token 
+      }, function(err, customer) {
+        callback(null, customer.id);
+      });
+    },
+    function(customer_id, callback) {
+      stripe.customers.createSubscription(
+        customer_id,
+        {plan: 'Pro'},
+        function(err, subscription) {
+          callback(null, subscription.customer);
+        }
+      );
+    },
+    function(customer_id, callback) {
+      User.update({id: req.user.id}, {$set: {stripeCustomerID: customer_id, isPro: true}}, function(err){
+        callback(null);
+      });
+    }
+  ], function(err) {
+    if (err) return res.status(500).send(err.message);
     res.status(200).send({});
   });
 }
