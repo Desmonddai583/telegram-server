@@ -51,24 +51,30 @@ router.post('/', function(req,res) {
 router.post('/follow', function(req,res) {
   var follow = req.body.followingID;
   
-  handlerFollowUserRequest(req,res,follow);
+  handleFollowUserRequest(req,res,follow);
 });
 
 router.post('/unfollow', function(req,res) {
   var unfollow = req.body.unfollowingID;
 
-  handlerUnFollowUserRequest(req,res,unfollow);
+  handleUnFollowUserRequest(req,res,unfollow);
 });
 
 router.post('/upgrade_account', function(req,res) {
   var upgrade_token = req.body.token;
   var account_email = req.body.email;
 
-  handlerUpgradeAccountRequest(req,res,upgrade_token,account_email);
+  handleUpgradeAccountRequest(req,res,upgrade_token,account_email);
 });
 
 router.post('/downgrade_account', function(req,res) {
-  handlerDowngradeAccountRequest(req,res);
+  handleDowngradeAccountRequest(req,res);
+});
+
+router.post('/update_credit_card', function(req,res) {
+  var updated_token = req.body.token;
+
+  handleUpdateCreditCardRequest(req,res,updated_token);
 });
 
 function handleLoginRequest(req, res, next) {
@@ -110,7 +116,7 @@ function handleFollowingRequest(req, res) {
   });
 }
 
-function handlerFollowUserRequest(req,res,follow) {
+function handleFollowUserRequest(req,res,follow) {
   async.parallel([
     function(callback) {
      User.update({id: req.user.id}, {$push: {following: follow}}, function(err){
@@ -136,7 +142,7 @@ function handlerFollowUserRequest(req,res,follow) {
   });
 }
 
-function handlerUnFollowUserRequest(req,res,unfollow) {
+function handleUnFollowUserRequest(req,res,unfollow) {
   async.parallel([
     function(callback) {
       User.update({id: req.user.id}, {$pull: {following: unfollow}}, function(err){
@@ -162,7 +168,7 @@ function handlerUnFollowUserRequest(req,res,unfollow) {
   });
 }
 
-function handlerUpgradeAccountRequest(req,res,upgrade_token,account_email) {
+function handleUpgradeAccountRequest(req,res,upgrade_token,account_email) {
   async.waterfall([
     function(callback) {
       stripe.customers.create({
@@ -204,7 +210,7 @@ function handlerUpgradeAccountRequest(req,res,upgrade_token,account_email) {
   });
 }
 
-function handlerDowngradeAccountRequest(req,res) {
+function handleDowngradeAccountRequest(req,res) {
   async.parallel([
     function(callback) {
       stripe.customers.del(
@@ -229,6 +235,15 @@ function handlerDowngradeAccountRequest(req,res) {
     }
   ], function(err) {
     if (err) return res.status(500).end(err.message);
+    res.status(200).send({});
+  });
+}
+
+function handleUpdateCreditCardRequest(req,res,updated_token) {
+  stripe.customers.update(req.user.stripeCustomerID, {
+    card: updated_token
+  }, function(err, customer) {
+    if(err) {console.log(err);}
     res.status(200).send({});
   });
 }
