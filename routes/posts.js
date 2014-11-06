@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
+var logger = require('nlogger').logger(module);
 var userUtil = require('../utils/user-utils');
 var Post = mongoose.model('Post');
 var User = mongoose.model('User');
@@ -19,14 +20,14 @@ router.post('/', ensureAuthenticated, function(req,res) {
 
   var newPost = new Post({ body: object.body, author: object.author, originalAuthor: object.originalAuthor });
   newPost.save(function (err, post) {
-    if (err) return console.error(err);
+    if (err) return logger.error(err);
     res.status(200).send({'post': post});
   });
 });
 
 router.delete('/:post_id', ensureAuthenticated, function(req,res) {
   Post.find({'_id': req.params.post_id}).remove(function(err,post) {
-    if (err) return console.error(err);
+    if (err) return logger.error(err);
     res.status(200).send({});
   })
 });

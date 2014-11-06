@@ -1,6 +1,7 @@
 var nconf = require('../middleware/nconf-config');
 var fs = require('fs');
 var jade = require('jade');
+var logger = require('nlogger').logger(module);
 var mailgun = require('mailgun-js')({apiKey: nconf.get('mailgun:api-key'), domain: nconf.get('mailgun:domain')});
 
 var mailer = exports;
@@ -25,7 +26,7 @@ mailer.compileTemplate = function(user, res) {
 
 function sendEmail(data, res) {
   mailgun.messages().send(data, function(err, body) {
-    if (err) return console.error(err);
+    if (err) return logger.error(err);
     res.status(200).send({});
   });
 }

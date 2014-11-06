@@ -5,6 +5,7 @@ var mongoose = require('mongoose');
 var bcrypt = require('bcrypt');
 var async = require("async");
 var nconf = require('../middleware/nconf-config');
+var logger = require('nlogger').logger(module);
 var stripe = require("stripe")(nconf.get('stripe:secret-key'));
 var userUtil = require('../utils/user-utils');
 var User = mongoose.model('User');
@@ -40,7 +41,7 @@ router.post('/', function(req,res) {
   userUtil.hashPassword(object, function(err, hash) {
     var newUser = new User({ id: object.id, password: hash, name: object.name, email: object.email, photo: 'images/avatar1.png' });
     newUser.save(function (err, user) {
-      if (err) return console.error(err);
+      if (err) return logger.error(err);
       req.logIn(newUser, function(err) {
         return res.status(200).send({"users": [userUtil.emberUser(newUser)]});
       });
@@ -121,7 +122,7 @@ function handleFollowUserRequest(req,res,follow) {
     function(callback) {
      User.update({id: req.user.id}, {$push: {following: follow}}, function(err){
       if(err) {
-        console.log(err);
+        logger.error(err);
         return callback(err);
       }
       callback(null);
@@ -130,7 +131,7 @@ function handleFollowUserRequest(req,res,follow) {
     function(callback) {
      User.update({id: follow}, {$push: {followers: req.user.id}}, function(err){
       if(err) {
-        console.log(err);
+        logger.error(err);
         return callback(err);
       }
       callback(null);
@@ -147,7 +148,7 @@ function handleUnFollowUserRequest(req,res,unfollow) {
     function(callback) {
       User.update({id: req.user.id}, {$pull: {following: unfollow}}, function(err){
         if(err) {
-          console.log(err);
+          logger.error(err);
           return callback(err);
         }
         callback(null);
@@ -156,7 +157,7 @@ function handleUnFollowUserRequest(req,res,unfollow) {
     function(callback) {
       User.update({id: unfollow}, {$pull: {followers: req.user.id}}, function(err){
         if(err) {
-          console.log(err);
+          logger.error(err);
           return callback(err);
         }
         callback(null);
@@ -176,9 +177,9 @@ function handleUpgradeAccountRequest(req,res,upgrade_token,account_email) {
         card: upgrade_token 
       }, function(err, customer) {
         if(err) {
-           console.log(err);
-           return callback(err);
-         }
+          logger.error(err);
+          return callback(err);
+        }
         callback(null, customer.id);
       });
     },
@@ -188,7 +189,7 @@ function handleUpgradeAccountRequest(req,res,upgrade_token,account_email) {
         {plan: 'Pro'},
         function(err, subscription) {
           if(err) {
-            console.log(err);
+            logger.error(err);
             return callback(err);
           }
           callback(null, subscription.customer);
@@ -198,7 +199,7 @@ function handleUpgradeAccountRequest(req,res,upgrade_token,account_email) {
     function(customer_id, callback) {
       User.update({id: req.user.id}, {$set: {stripeCustomerID: customer_id, isPro: true}}, function(err){
         if(err) {
-          console.log(err);
+          logger.error(err);
           return callback(err);
         }
         callback(null);
@@ -217,7 +218,7 @@ function handleDowngradeAccountRequest(req,res) {
         req.user.stripeCustomerID,
         function(err) {
           if(err) {
-            console.log(err);
+            logger.error(err);
             return callback(err);
           }
           callback(null);
@@ -227,7 +228,7 @@ function handleDowngradeAccountRequest(req,res) {
     function(callback) {
       User.update({id: req.user.id}, {$set: {stripeCustomerID: null, isPro: false}}, function(err){
         if(err) {
-          console.log(err);
+          logger.error(err);
           return callback(err);
         }
         callback(null);
@@ -243,7 +244,7 @@ function handleUpdateCreditCardRequest(req,res,updated_token) {
   stripe.customers.update(req.user.stripeCustomerID, {
     card: updated_token
   }, function(err, customer) {
-    if(err) {console.log(err);}
+    if(err) {logger.error(err);}
     res.status(200).send({});
   });
 }

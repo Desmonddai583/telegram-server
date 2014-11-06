@@ -4,13 +4,14 @@ var mongoose = require('mongoose');
 var md5 = require('MD5');
 var bcrypt = require('bcrypt');
 var async = require("async");
+var logger = require('nlogger').logger(module);
 var userUtil = require('../utils/user-utils');
 var mailer = require('../utils/mailer');
 var User = mongoose.model('User');
 
 router.post('/forgotPassword', function(req, res) {
   User.findOne({email: req.body.email}, function(err, user){
-    if (err) return console.error(err);
+    if (err) return logger.error(err);
     if (!user) { return res.status(400).send("The user does not exist!"); }
     var token = userUtil.generateToken(10, 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890');
     User.findOneAndUpdate({email: req.body.email}, {$set: {token: token}}, function(err, user) {
@@ -21,7 +22,7 @@ router.post('/forgotPassword', function(req, res) {
 
 router.get('/checkToken', function(req, res){
   User.findOne({token: req.query.token}, function(err, user){
-    if (err) return console.error(err);
+    if (err) return logger.error(err);
     if (!user) { return res.status(400).send("The token expired or does not exist!"); }
     res.status(200).send({});
   });
@@ -29,7 +30,7 @@ router.get('/checkToken', function(req, res){
 
 router.post('/resetPassword', function(req, res) {
   User.findOne({token: req.body.token}, function(err, user){
-    if (err) return console.error(err);
+    if (err) return logger.error(err);
     if (!user) { return res.status(400).send("The token expired or does not exist!"); }
 
     async.waterfall([
@@ -40,7 +41,7 @@ router.post('/resetPassword', function(req, res) {
         User.findOneAndUpdate({token: req.body.token}, {$set: {password: hash, token: null}}, callback);
       },
     ], function(err, user) {
-      if (err) return console.error(err);
+      if (err) return logger.error(err);
       if (!user) { return res.status(400).send("The token expired or does not exist!"); }
       res.status(200).send({});
     }); 
