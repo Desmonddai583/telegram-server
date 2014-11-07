@@ -16,7 +16,7 @@ module.exports = function(app) {
   app.use(bodyParser.json());
   app.use(cookieParser());
   app.use(session({ secret: 'desmond.dai',
-                    cookie: { maxAge: 300000 },
+                    cookie: { maxAge: 300000000 },
                     saveUninitialized: true,
                     resave: true,
                     store: new MongoStore({'db': nconf.get('mongoStore:database')})
