@@ -6,7 +6,7 @@ var mailgun = require('mailgun-js')({apiKey: nconf.get('mailgun:api-key'), domai
 
 var mailer = exports;
 
-mailer.compileTemplate = function(user, res) {
+mailer.resetPassword = function(user, res) {
   fs.readFile('templates/emails/send-reset-password.jade', 'utf8', function (err, data) {
     if (err) throw err;
     var fn = jade.compile(data);
@@ -22,6 +22,27 @@ mailer.compileTemplate = function(user, res) {
 
     sendEmail(data, res);
   });
+}
+
+mailer.expireProAccount = function(user,res) {
+  if (user) {
+    fs.readFile('templates/emails/expire-pro-account.jade', 'utf8', function (err, data) {
+      if (err) throw err;
+      var fn = jade.compile(data);
+      var html = fn();
+
+      var data = {
+        from: 'desmonddai583@gmail.com',
+        to: user.email,
+        subject: 'Pro Account Expired',
+        html: html
+      };
+
+      sendEmail(data, res);
+    });     
+  } else {
+    res.status(200).send({});
+  }
 }
 
 function sendEmail(data, res) {

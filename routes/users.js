@@ -8,6 +8,7 @@ var nconf = require('../middleware/nconf-config');
 var logger = require('nlogger').logger(module);
 var stripe = require("stripe")(nconf.get('stripe:secret-key'));
 var userUtil = require('../utils/user-utils');
+var mailer = require('../utils/mailer');
 var User = mongoose.model('User');
 
 router.get('/', function(req,res,next) {
@@ -76,6 +77,14 @@ router.post('/update_credit_card', function(req,res) {
   var updated_token = req.body.token;
 
   handleUpdateCreditCardRequest(req,res,updated_token);
+});
+
+router.post('/expire_pro_account', function(req,res) {
+  if (req.body.type === 'charge.failed') {
+    handleExpireProAccountRequest(req,res);
+  } else {
+    res.status(200).end();
+  }
 });
 
 function handleLoginRequest(req, res, next) {
@@ -246,6 +255,35 @@ function handleUpdateCreditCardRequest(req,res,updated_token) {
   }, function(err, customer) {
     if(err) {logger.error(err);}
     res.status(200).send({});
+  });
+}
+
+function handleExpireProAccountRequest(req,res) {
+  async.parallel([
+    function(callback) {
+      stripe.customers.del(
+        req.body.data.object.customer,
+        function(err) {
+          if(err) {
+            logger.error(err);
+            return callback(err);
+          }
+          callback(null);
+        }
+      );
+    },
+    function(callback) {
+      User.findOneAndUpdate({stripeCustomerID: req.body.data.object.customer}, {$set: {stripeCustomerID: null, isPro: false}}, function(err, user){
+        if(err) {
+          logger.error(err);
+          return callback(err);
+        }
+        callback(null, user);
+      }); 
+    }
+  ], function(err, result) {
+    if (err) return res.status(500).end(err.message);
+    mailer.expireProAccount(result[1], res);
   });
 }
 

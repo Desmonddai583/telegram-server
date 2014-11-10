@@ -15,7 +15,7 @@ router.post('/forgotPassword', function(req, res) {
     if (!user) { return res.status(400).send("The user does not exist!"); }
     var token = userUtil.generateToken(10, 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890');
     User.findOneAndUpdate({email: req.body.email}, {$set: {token: token}}, function(err, user) {
-      mailer.compileTemplate(user, res);
+      mailer.resetPassword(user, res);
     });  
   });
 });
