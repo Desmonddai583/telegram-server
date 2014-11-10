@@ -50,30 +50,30 @@ router.post('/', function(req,res) {
   });
 });
 
-router.post('/follow', function(req,res) {
+router.post('/follow', ensureAuthenticated, function(req,res) {
   var follow = req.body.followingID;
   
   handleFollowUserRequest(req,res,follow);
 });
 
-router.post('/unfollow', function(req,res) {
+router.post('/unfollow', ensureAuthenticated, function(req,res) {
   var unfollow = req.body.unfollowingID;
 
   handleUnFollowUserRequest(req,res,unfollow);
 });
 
-router.post('/upgrade_account', function(req,res) {
+router.post('/upgrade_account', ensureAuthenticated, function(req,res) {
   var upgrade_token = req.body.token;
   var account_email = req.body.email;
 
   handleUpgradeAccountRequest(req,res,upgrade_token,account_email);
 });
 
-router.post('/downgrade_account', function(req,res) {
+router.post('/downgrade_account', ensureAuthenticated, function(req,res) {
   handleDowngradeAccountRequest(req,res);
 });
 
-router.post('/update_credit_card', function(req,res) {
+router.post('/update_credit_card', ensureAuthenticated, function(req,res) {
   var updated_token = req.body.token;
 
   handleUpdateCreditCardRequest(req,res,updated_token);
@@ -86,6 +86,13 @@ router.post('/expire_pro_account', function(req,res) {
     res.status(200).end();
   }
 });
+
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  return res.status(403).end();  
+}
 
 function handleLoginRequest(req, res, next) {
   passport.authenticate('local', function(err, user, info) {
