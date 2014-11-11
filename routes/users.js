@@ -289,8 +289,11 @@ function handleExpireProAccountRequest(req,res) {
       }); 
     }
   ], function(err, result) {
-    if (err) return res.status(500).end(err.message);
-    mailer.expireProAccount(result[1], res);
+    if (err) res.status(500).end(err.message);
+    mailer.expireProAccount(result[1], function(err) {
+      if (err) res.status(500).end(err.message);
+      res.status(200).send({});
+    });
   });
 }
 

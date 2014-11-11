@@ -6,9 +6,12 @@ var mailgun = require('mailgun-js')({apiKey: nconf.get('mailgun:api-key'), domai
 
 var mailer = exports;
 
-mailer.resetPassword = function(user, res) {
+mailer.resetPassword = function(user, callback) {
   fs.readFile('templates/emails/send-reset-password.jade', 'utf8', function (err, data) {
-    if (err) throw err;
+    if (err) {
+      logger.error(err);
+      callback(err);
+    }
     var fn = jade.compile(data);
     var resetPasswordLink = "http://" + nconf.get('client:host') + "/reset_password/" + user.token
     var html = fn({resetPasswordLink: resetPasswordLink});
@@ -20,14 +23,17 @@ mailer.resetPassword = function(user, res) {
       html: html
     };
 
-    sendEmail(data, res);
+    sendEmail(data, callback);
   });
 }
 
-mailer.expireProAccount = function(user,res) {
+mailer.expireProAccount = function(user, callback) {
   if (user) {
     fs.readFile('templates/emails/expire-pro-account.jade', 'utf8', function (err, data) {
-      if (err) throw err;
+      if (err) {
+        logger.error(err);
+        callback(err);
+      }
       var fn = jade.compile(data);
       var html = fn();
 
@@ -38,16 +44,38 @@ mailer.expireProAccount = function(user,res) {
         html: html
       };
 
-      sendEmail(data, res);
+      sendEmail(data, callback);
     });     
   } else {
-    res.status(200).send({});
+    callback(null);
   }
 }
 
-function sendEmail(data, res) {
+mailer.sendDigest = function(posts, user, callback) {
+  fs.readFile('templates/emails/send-digest.jade', 'utf8', function (err, data) {
+    if (err) {
+      logger.error(err);
+      callback(err);
+    }
+    var fn = jade.compile(data);
+    var html = fn({posts: posts});
+    var data = {
+      from: 'desmonddai583@gmail.com',
+      to: user.email,
+      subject: 'Digest From Telegram',
+      html: html
+    };
+
+    sendEmail(data, callback);
+  });
+}
+
+function sendEmail(data, callback) {
   mailgun.messages().send(data, function(err, body) {
-    if (err) return logger.error(err);
-    res.status(200).send({});
+    if (err) {
+      logger.error(err);
+      callback(err);
+    }
+    callback(null);
   });
 }

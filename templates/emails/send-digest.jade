@@ -1,0 +1,12 @@
+doctype html
+html
+  head
+  
+  body
+    p Here are the digest from last 24 hours 
+    div
+      each post in posts
+        span= post.author
+        p= post.body
+        span= post.date
+        br
