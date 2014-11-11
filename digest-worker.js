@@ -17,6 +17,5 @@ db.once('open', function callback () {
       done();
     }
   });
-
   app.start();
 });
