@@ -16,5 +16,9 @@
   },
   "stripe": {
     "secret-key": "sk_test_ZaKKJ9YpgJPwIZRBGIoYQUXY"
+  },
+  "sqs": {
+    "aws-id": "AKIAI6D7YGM45PYLHS6A",
+    "aws-secret": "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"
   }
 }

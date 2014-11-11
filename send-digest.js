@@ -1,20 +1,31 @@
 var logger = require('nlogger').logger(module);
 var CronJob = require('cron').CronJob;
+var mongoose = require('mongoose');
 var SQS = require('aws-sqs');
-var sqs = new SQS('AKIAI6D7YGM45PYLHS6A', '42zLfXr/jErpyM4+lZFMriU+aBUPjkUyqpGMDwSc');
+var nconf = require('./middleware/nconf-config');
+var db = require('./database/database');
+var sqs = new SQS(nconf.get('sqs:aws-id'), nconf.get('sqs:aws-secret'));
+var User = mongoose.model('User');
 
-var job = new CronJob('0 0 8 * * *', function(){
-    sqs.sendMessage('/410293358835/sendDigest', 'hello', function(err, res) {
-      if(err) {
-        logger.error(err);
-      }
-      logger.info(res);
+db.once('open', function callback () {
+  var job = new CronJob('0 0 8 * * *', function() {
+    User.find({isPro: true}, function(err, users){
+      if (err) logger.error(err);
+      users.forEach(function(user) {
+        sqs.sendMessage('/410293358835/sendDigest', {userID: user.id, workType: 'digest'}, function(err, res) {
+          if(err) {
+            logger.error(err);
+          }
+          logger.info(res)
+        });
+      }); 
     });
   }, function () {
-    logger.info('Cron job execution is completed!');
-  },
-  true
-);
+    logger.info('Sending digest to Pro accounts is completed!');
+  }, true);
+});
+
+
 
 
 
