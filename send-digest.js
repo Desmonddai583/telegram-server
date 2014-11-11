@@ -8,11 +8,11 @@ var sqs = new SQS(nconf.get('sqs:aws-id'), nconf.get('sqs:aws-secret'));
 var User = mongoose.model('User');
 
 db.once('open', function callback () {
-  var job = new CronJob('0 0 8 * * *', function() {
+  var job = new CronJob('* * * * * *', function() {
     User.find({isPro: true}, function(err, users){
       if (err) logger.error(err);
       users.forEach(function(user) {
-        sqs.sendMessage('/410293358835/sendDigest', {userID: user.id, workType: 'digest'}, function(err, res) {
+        sqs.sendMessage('/410293358835/sendDigest', JSON.stringify({userID: user.id, workType: 'digest'}), function(err, res) {
           if(err) {
             logger.error(err);
           }
