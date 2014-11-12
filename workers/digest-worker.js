@@ -2,7 +2,7 @@ var logger = require('nlogger').logger(module);
 var Consumer = require('sqs-consumer');
 var async = require("async");
 var mongoose = require('mongoose');
-var nconf = require('../middleware/nconf-config');
+var nconf = require('../config/nconf-config');
 var db = require('../database/database');
 var AWS = require('aws-sdk');
 var sqs = new AWS.SQS({accessKeyId: nconf.get('sqs:aws-id'), secretAccessKey: nconf.get('sqs:aws-secret'), region: nconf.get('sqs:region')});
@@ -39,7 +39,10 @@ db.once('open', function callback () {
         }
       ], function(err, results) {
         if (err) return done(err);
-        mailer.sendDigest(results[0],results[1], function() {
+        mailer.sendDigest(results[0],results[1], function(err) {
+          if(err) {
+            done(err);
+          }
           done();
         })
       });
