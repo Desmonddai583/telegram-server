@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 var autoIncrement = require('mongoose-auto-increment');
-var nconf = require('../middleware/nconf-config');
+var nconf = require('../config/nconf-config');
 var userSchema = require('./schemas/user');
 var postSchema = require('./schemas/post');
 

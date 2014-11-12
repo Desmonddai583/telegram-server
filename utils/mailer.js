@@ -1,4 +1,4 @@
-var nconf = require('../middleware/nconf-config');
+var nconf = require('../config/nconf-config');
 var fs = require('fs');
 var jade = require('jade');
 var logger = require('nlogger').logger(module);
@@ -52,7 +52,7 @@ mailer.expireProAccount = function(user, callback) {
 }
 
 mailer.sendDigest = function(posts, user, callback) {
-  fs.readFile('templates/emails/send-digest.jade', 'utf8', function (err, data) {
+  fs.readFile('../templates/emails/send-digest.jade', 'utf8', function (err, data) {
     if (err) {
       logger.error(err);
       callback(err);

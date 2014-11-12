@@ -1,5 +1,5 @@
 var express = require('express');
-var nconf = require('./nconf-config');
+var nconf = require('../config/nconf-config');
 var bodyParser = require('body-parser');
 var session = require('express-session');
 var MongoStore = require('connect-mongostore')(session);

@@ -1,6 +1,6 @@
 var express = require('express');
 var app = express();
-var nconf = require('./middleware/nconf-config');
+var nconf = require('./config/nconf-config');
 var expressConfig = require('./middleware/express-config')(app);
 var db = require('./database/database');
 var passportConfig = require('./middleware/passport');
