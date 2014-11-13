@@ -18,28 +18,19 @@ db.once('open', function callback () {
     handleMessage: function (message, done) {
       user_id = JSON.parse(message.Body).userID;
 
-      async.parallel([
-        function(callback) {
-          Post.find({author: user_id}).sort({'date':-1}).limit(5).exec(function(err, posts){ 
-            if(err) {
-              logger.error(err)
-              return callback(err);
-            }
-            callback(null, posts)
-          });
+      async.parallel({
+        posts: function(callback) {
+          Post.find({author: user_id}).sort({'date':-1}).limit(5).exec(callback);
         },
-        function(callback) {
-          User.findOne({id: user_id}, function(err, user) { 
-            if(err) {
-              logger.error(err)
-              return callback(err);
-            }
-            callback(null, user)
-          });
+        user: function(callback) {
+          User.findOne({id: user_id}, callback);
         }
-      ], function(err, results) {
-        if (err) return done(err);
-        mailer.sendDigest(results[0],results[1], function(err) {
+      }, function(err, results) {
+        if (err) {
+          logger.error(err)
+          return done(err);
+        }
+        mailer.sendDigest(results.posts,results.user, function(err) {
           if(err) {
             done(err);
           }
