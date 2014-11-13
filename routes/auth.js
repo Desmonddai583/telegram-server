@@ -5,7 +5,6 @@ var md5 = require('MD5');
 var bcrypt = require('bcrypt');
 var async = require("async");
 var logger = require('nlogger').logger(module);
-var userUtil = require('../utils/user-utils');
 var mailer = require('../utils/mailer');
 var User = mongoose.model('User');
 
@@ -13,9 +12,9 @@ router.post('/forgotPassword', function(req, res) {
   User.findOne({email: req.body.email}, function(err, user){
     if (err) return logger.error(err);
     if (!user) { return res.status(400).send("The user does not exist!"); }
-    var token = userUtil.generateToken(10, 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890');
+    var token = User.generateToken(10, 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890');
     User.findOneAndUpdate({email: req.body.email}, {$set: {token: token}}, function(err, user) {
-      mailer.resetPassword(user, function() {
+      mailer.sendResetPassword(user, function() {
         if (err) return res.status(500).send(err.message);
         res.status(200).send({});
       });
@@ -38,7 +37,7 @@ router.post('/resetPassword', function(req, res) {
 
     async.waterfall([
       function(callback) {
-        userUtil.hashPassword(req.body, callback);
+        User.hashPassword(req.body, callback);
       },
       function(hash, callback) {
         User.findOneAndUpdate({token: req.body.token}, {$set: {password: hash, token: null}}, callback);

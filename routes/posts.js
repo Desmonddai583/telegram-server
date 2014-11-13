@@ -1,8 +1,8 @@
 var express = require('express');
 var router = express.Router();
+var async = require("async");
 var mongoose = require('mongoose');
 var logger = require('nlogger').logger(module);
-var userUtil = require('../utils/user-utils');
 var Post = mongoose.model('Post');
 var User = mongoose.model('User');
 
@@ -18,18 +18,17 @@ router.get('/', function(req,res) {
 router.post('/', ensureAuthenticated, function(req,res) {
   var object = req.body.post;
 
-  var newPost = new Post({ body: object.body, author: object.author, originalAuthor: object.originalAuthor });
-  newPost.save(function (err, post) {
+  Post.create({ body: object.body, author: object.author, originalAuthor: object.originalAuthor }, function (err, post) {
     if (err) return logger.error(err);
     res.status(200).send({'post': post});
-  });
+  })
 });
 
 router.delete('/:post_id', ensureAuthenticated, function(req,res) {
-  Post.find({'_id': req.params.post_id}).remove(function(err,post) {
+  Post.findByIdAndRemove(req.params.post_id, {}, function(err,post) {
     if (err) return logger.error(err);
     res.status(200).send({});
-  })
+  });
 });
 
 function ensureAuthenticated(req, res, next) {
@@ -47,16 +46,26 @@ function handleUserPostsRequest(req, res) {
 
 function handleDashboardPostsRequest(req, res) {
   if (req.isAuthenticated()) {
-    req.user.following.push(req.user.id)
-    var relatedUsers = req.user.following
-    User.find({id: {$in: relatedUsers}}, function(err, users) {
-      Post.find({author: {$in: relatedUsers}}).sort({'date':-1}).exec(function(err, posts) { 
-        var newUsers = [];
-        users.forEach(function(user) {
-          newUsers.push(userUtil.emberUser(user,req.user));
-        }); 
-        res.status(200).send({'posts': posts, 'users': newUsers});
-      });    
+    req.user.following.push(req.user.id);
+    var relatedUsers = req.user.following;
+
+    async.parallel({
+      users: function(callback) {
+        User.find({id: {$in: relatedUsers}}, callback);
+      },
+      posts: function(callback) {
+        Post.find({author: {$in: relatedUsers}}).sort({'date':-1}).exec(callback);
+      }
+    }, function(err, results) {
+      if (err) {
+        logger.error(err);
+        return res.status(500).send(err.message);
+      }
+      var newUsers = [];
+      results.users.forEach(function(user) {
+        newUsers.push(user.emberUser(req.user));
+      }); 
+      res.status(200).send({'posts': results.posts, 'users': newUsers});
     });
   }
 };

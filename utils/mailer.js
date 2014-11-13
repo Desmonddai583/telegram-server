@@ -6,7 +6,7 @@ var mailgun = require('mailgun-js')({apiKey: nconf.get('mailgun:api-key'), domai
 
 var mailer = exports;
 
-mailer.resetPassword = function(user, callback) {
+mailer.sendResetPassword = function(user, callback) {
   fs.readFile('templates/emails/send-reset-password.jade', 'utf8', function (err, data) {
     if (err) {
       logger.error(err);
@@ -23,11 +23,11 @@ mailer.resetPassword = function(user, callback) {
       html: html
     };
 
-    sendEmail(data, callback);
+    mailer.sendEmail(data, callback);
   });
 }
 
-mailer.expireProAccount = function(user, callback) {
+mailer.sendExpireProAccount = function(user, callback) {
   if (user) {
     fs.readFile('templates/emails/expire-pro-account.jade', 'utf8', function (err, data) {
       if (err) {
@@ -44,7 +44,7 @@ mailer.expireProAccount = function(user, callback) {
         html: html
       };
 
-      sendEmail(data, callback);
+      mailer.sendEmail(data, callback);
     });     
   } else {
     callback(null);
@@ -66,11 +66,11 @@ mailer.sendDigest = function(posts, user, callback) {
       html: html
     };
 
-    sendEmail(data, callback);
+    mailer.sendEmail(data, callback);
   });
 }
 
-function sendEmail(data, callback) {
+mailer.sendEmail = function(data, callback) {
   mailgun.messages().send(data, function(err, body) {
     if (err) {
       logger.error(err);

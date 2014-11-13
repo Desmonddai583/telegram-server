@@ -1,7 +1,8 @@
 var async = require("async");
 var bcrypt = require('bcrypt');
+var mongoose = require('mongoose');
 var LocalStrategy = require('passport-local').Strategy;
-var userUtil = require('../utils/user-utils');
+var User = mongoose.model('User');
 
 function initPassport() {
   var passport = require('passport');
@@ -10,7 +11,7 @@ function initPassport() {
   });
 
   passport.deserializeUser(function(id, done) {
-    userUtil.findById(id, function(err, user) {
+    User.findByUserId(id, function(err, user) {
       done(err, user);
     });
   });
@@ -22,7 +23,7 @@ function initPassport() {
     function(username, password, done) {
       async.waterfall([
         function(callback) {
-          userUtil.findById(username, callback); 
+          User.findByUserId(username, callback); 
         },
         function(user,callback) {
           validateUser(user, password, callback);

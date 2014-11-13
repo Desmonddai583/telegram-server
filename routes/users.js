@@ -7,7 +7,6 @@ var async = require("async");
 var nconf = require('../config/nconf-config');
 var logger = require('nlogger').logger(module);
 var stripe = require("stripe")(nconf.get('stripe:secret-key'));
-var userUtil = require('../utils/user-utils');
 var mailer = require('../utils/mailer');
 var User = mongoose.model('User');
 
@@ -29,22 +28,22 @@ router.get('/', function(req,res,next) {
 });
 
 router.get('/:user_id', function(req,res) {
-  userUtil.findById(req.params.user_id, function(err, user) {
+  User.findById(req.params.user_id, function(err, user) {
     if (err) { return res.status(500).end(); }
     if (!user) { return res.status(400).send("Can not found the user"); }
-    res.status(200).send({"user": userUtil.emberUser(user,req.user)});
+    res.status(200).send({"user": user.emberUser(req.user)});
   });
 });
 
 router.post('/', function(req,res) {
   var object = req.body.user;
 
-  userUtil.hashPassword(object, function(err, hash) {
+  User.hashPassword(object, function(err, hash) {
     var newUser = new User({ id: object.id, password: hash, name: object.name, email: object.email, photo: 'images/avatar1.png' });
     newUser.save(function (err, user) {
       if (err) return logger.error(err);
       req.logIn(newUser, function(err) {
-        return res.status(200).send({"users": [userUtil.emberUser(newUser)]});
+        return res.status(200).send({"users": [user.emberUser(newUser)]});
       });
     });
   });
@@ -99,7 +98,7 @@ function handleLoginRequest(req, res, next) {
     if (err) { return res.status(500).end(); }
     if (!user) { return res.status(400).send(info.message); } 
     req.logIn(user, function(err) {
-      return res.status(200).send({"users": [userUtil.emberUser(user)]});
+      return res.status(200).send({"users": [user.emberUser(user)]});
     }); 
   })(req, res, next)
 }
@@ -117,7 +116,7 @@ function handleFollowersRequest(req, res) {
   User.find({following: req.query.user}, function(err, followers){
     var users = [];
     followers.forEach(function(user) {
-      users.push(userUtil.emberUser(user,req.user));
+      users.push(user.emberUser(req.user));
     }); 
     res.status(200).send({'users': users});
   });
@@ -127,7 +126,7 @@ function handleFollowingRequest(req, res) {
   User.find({followers: req.query.user}, function(err, following){
     var users = [];
     following.forEach(function(user) {
-      users.push(userUtil.emberUser(user,req.user));
+      users.push(user.emberUser(req.user));
     }); 
     res.status(200).send({'users': users});
   });
@@ -290,7 +289,7 @@ function handleExpireProAccountRequest(req,res) {
     }
   ], function(err, result) {
     if (err) res.status(500).end(err.message);
-    mailer.expireProAccount(result[1], function(err) {
+    mailer.sendExpireProAccount(result[1], function(err) {
       if (err) res.status(500).end(err.message);
       res.status(200).send({});
     });
