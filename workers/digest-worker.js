@@ -5,15 +5,15 @@ var mongoose = require('mongoose');
 var nconf = require('../config/nconf-config');
 var db = require('../database/database');
 var AWS = require('aws-sdk');
-var sqs = new AWS.SQS({accessKeyId: nconf.get('sqs:aws-id'), secretAccessKey: nconf.get('sqs:aws-secret'), region: nconf.get('sqs:region')});
+var sqs = new AWS.SQS({accessKeyId: nconf.get('aws:aws-id'), secretAccessKey: nconf.get('aws:aws-secret'), region: nconf.get('aws:region')});
 var User = mongoose.model('User');
 var Post = mongoose.model('Post');
 var mailer = require('../utils/mailer');
 
 db.once('open', function callback () {
   var app = new Consumer({
-    queueUrl: nconf.get('sqs:queue-url'),
-    region: nconf.get('sqs:region'),
+    queueUrl: nconf.get('aws:queue-url'),
+    region: nconf.get('aws:region'),
     sqs: sqs,
     handleMessage: function (message, done) {
       user_id = JSON.parse(message.Body).userID;

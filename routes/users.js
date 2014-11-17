@@ -4,6 +4,7 @@ var passport = require('passport');
 var mongoose = require('mongoose');
 var bcrypt = require('bcrypt');
 var async = require("async");
+var aws = require('aws-sdk');
 var nconf = require('../config/nconf-config');
 var logger = require('nlogger').logger(module);
 var stripe = require("stripe")(nconf.get('stripe:secret-key'));
@@ -27,11 +28,45 @@ router.get('/', function(req,res,next) {
   }
 });
 
+router.get('/sign_s3', ensureAuthenticated, function(req, res){
+  var file_name = req.user.id + (new Date()).getTime().toString();
+  aws.config.update({accessKeyId: nconf.get('aws:aws-id'), secretAccessKey: nconf.get('aws:aws-secret')});
+  var s3 = new aws.S3();
+  var s3_params = {
+    Bucket: nconf.get('aws:bucket-name'),
+    Key: file_name,
+    Expires: 60,
+    ContentType: req.query.s3_object_type,
+    ACL: 'public-read'
+  };
+  s3.getSignedUrl('putObject', s3_params, function(err, data){
+    if(err){
+      logger.error(err);
+    }
+    else{
+      var return_data = {
+        signed_request: data,
+        url: 'https://' + nconf.get('aws:bucket-name') + '.s3.amazonaws.com/' + file_name
+      };
+      res.write(JSON.stringify(return_data));
+      res.end();
+    }
+  });
+});
+
 router.get('/:user_id', function(req,res) {
   User.findById(req.params.user_id, function(err, user) {
     if (err) { return res.status(500).end(); }
     if (!user) { return res.status(400).send("Can not found the user"); }
     res.status(200).send({"user": user.emberUser(req.user)});
+  });
+});
+
+router.put('/:user_id', ensureAuthenticated, function(req,res) {
+  var info = req.body;
+  User.findOneAndUpdate({id: req.user.id}, {$set: {photo: info.photo, name: info.fullName, email: info.email}}, function(err, user) {
+    if (err) { return res.status(500).end(); }
+    res.status(200).send({"user": user.emberUser(user)});
   });
 });
 

@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 var SQS = require('aws-sqs');
 var nconf = require('./config/nconf-config');
 var db = require('./database/database');
-var sqs = new SQS(nconf.get('sqs:aws-id'), nconf.get('sqs:aws-secret'));
+var sqs = new SQS(nconf.get('aws:aws-id'), nconf.get('aws:aws-secret'));
 var User = mongoose.model('User');
 
 db.once('open', function callback () {

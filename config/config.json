@@ -17,10 +17,11 @@
   "stripe": {
     "secret-key": "sk_test_ZaKKJ9YpgJPwIZRBGIoYQUXY"
   },
-  "sqs": {
+  "aws": {
     "aws-id": "AKIAI6D7YGM45PYLHS6A",
     "aws-secret": "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",
     "queue-url": "https://sqs.us-east-1.amazonaws.com/410293358835/sendDigest",
-    "region": "us-east-1"
+    "region": "us-east-1",
+    "bucket-name": "telegram-avatar"
   }
 }
