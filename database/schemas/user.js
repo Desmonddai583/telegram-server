@@ -15,7 +15,7 @@ var userSchema = new mongoose.Schema({
 });
 
 userSchema.methods.emberUser = function(current_user) {
-  var newUser = {id: this.id, name: this.name, photo: this.photo, isPro: this.isPro};
+  var newUser = {id: this.id, name: this.name, email: this.email, photo: this.photo, isPro: this.isPro};
   if (current_user) {
     if (this.followers && this.followers.indexOf(current_user.id) >= 0) {
       newUser.isFollowedByCurrentUser = true;
