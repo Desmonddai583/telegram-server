@@ -5,6 +5,7 @@ var mongoose = require('mongoose');
 var bcrypt = require('bcrypt');
 var async = require("async");
 var aws = require('aws-sdk');
+var crypto = require('crypto');
 var nconf = require('../config/nconf-config');
 var logger = require('nlogger').logger(module);
 var stripe = require("stripe")(nconf.get('stripe:secret-key'));
@@ -29,29 +30,31 @@ router.get('/', function(req,res,next) {
 });
 
 router.get('/sign_s3', ensureAuthenticated, function(req, res){
-  var file_name = req.user.id + (new Date()).getTime().toString();
-  aws.config.update({accessKeyId: nconf.get('aws:aws-id'), secretAccessKey: nconf.get('aws:aws-secret')});
-  var s3 = new aws.S3();
-  var s3_params = {
-    Bucket: nconf.get('aws:bucket-name'),
-    Key: file_name,
-    Expires: 60,
-    ContentType: req.query.s3_object_type,
-    ACL: 'public-read'
+  var expiration = new Date();
+  expiration.setHours(expiration.getHours() + 1);
+
+  var policy = {
+      expiration: expiration.toISOString(),
+      conditions: [
+          {bucket: nconf.get('aws:bucket-name')},
+          {acl: "public-read"},
+          ["starts-with", "$key", ""] ,
+          ["content-length-range", 0, 1048576]
+      ]
   };
-  s3.getSignedUrl('putObject', s3_params, function(err, data){
-    if(err){
-      logger.error(err);
-    }
-    else{
-      var return_data = {
-        signed_request: data,
-        url: 'https://' + nconf.get('aws:bucket-name') + '.s3.amazonaws.com/' + file_name
-      };
-      res.write(JSON.stringify(return_data));
-      res.end();
-    }
-  });
+  var awsKeyId = nconf.get('aws:aws-id');
+  var awsKey = nconf.get('aws:aws-secret');
+
+  var policyString = JSON.stringify(policy);
+  var encodedPolicyString = new Buffer(policyString).toString("base64");
+
+  var hmac = crypto.createHmac("sha1", awsKey);
+  hmac.update(encodedPolicyString);
+
+  var digest = hmac.digest('base64');
+
+  res.json({key: req.query.name, acl: 'public-read', bucket: nconf.get('aws:bucket-name'), awsaccesskeyid: awsKeyId, policy: encodedPolicyString, signature: digest});
+  res.end();
 });
 
 router.get('/:user_id', function(req,res) {
