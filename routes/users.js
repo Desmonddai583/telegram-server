@@ -53,7 +53,12 @@ router.get('/sign_s3', ensureAuthenticated, function(req, res){
 
   var digest = hmac.digest('base64');
 
-  res.json({key: req.query.name, acl: 'public-read', bucket: nconf.get('aws:bucket-name'), awsaccesskeyid: awsKeyId, policy: encodedPolicyString, signature: digest});
+  res.json({key: req.query.name, 
+            acl: 'public-read', 
+            bucket: nconf.get('aws:bucket-name'), 
+            awsaccesskeyid: awsKeyId, 
+            policy: encodedPolicyString, 
+            signature: digest});
   res.end();
 });
 
