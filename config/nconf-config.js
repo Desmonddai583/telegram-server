@@ -4,8 +4,7 @@ var configFile = path.join(__dirname, 'config.json');
 function initNConf() {
   var nconf = require('nconf');
 
-  nconf.use('file', { file: configFile });
-  nconf.load();
+  nconf.add('file', { type: 'file', file: configFile });
 
   return nconf;
 }
