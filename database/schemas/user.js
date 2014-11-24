@@ -1,4 +1,5 @@
 var mongoose = require('mongoose');
+var generatePassword = require('password-generator');
 var bcrypt = require('bcrypt');
 
 var userSchema = new mongoose.Schema({
@@ -24,9 +25,8 @@ userSchema.methods.emberUser = function(current_user) {
   return newUser;
 }
 
-userSchema.statics.generateToken = function(n, a) {
-  var index = (Math.random() * (a.length - 1)).toFixed(0);
-  return n > 0 ? a[index] + this.generateToken(n - 1, a) : '';
+userSchema.statics.generateToken = function(n) {
+  return generatePassword(n, false)
 };
 
 userSchema.statics.findByUserId = function(id, callback) {

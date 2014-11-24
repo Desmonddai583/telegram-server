@@ -24,6 +24,7 @@
     "nlogger": "^0.4.0",
     "passport": "^0.2.1",
     "passport-local": "^1.0.0",
+    "password-generator": "^0.2.3",
     "sqs-consumer": "^1.0.2",
     "stripe": "^2.8.0"
   }

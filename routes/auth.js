@@ -12,7 +12,7 @@ router.post('/forgotPassword', function(req, res) {
   User.findOne({email: req.body.email}, function(err, user){
     if (err) return logger.error(err);
     if (!user) { return res.status(400).send("The user does not exist!"); }
-    var token = User.generateToken(10, 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890');
+    var token = User.generateToken(10);
     User.findOneAndUpdate({email: req.body.email}, {$set: {token: token}}, function(err, user) {
       mailer.sendResetPassword(user, function() {
         if (err) return res.status(500).send(err.message);
