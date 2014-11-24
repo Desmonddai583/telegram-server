@@ -5,6 +5,7 @@ var mongoose = require('mongoose');
 var logger = require('nlogger').logger(module);
 var Post = mongoose.model('Post');
 var User = mongoose.model('User');
+var authentication_check = require('../middleware/authentication-check');
 
 router.get('/', function(req,res) {
   if (req.query.operation === 'userPosts') {
@@ -15,7 +16,7 @@ router.get('/', function(req,res) {
   }
 });
 
-router.post('/', ensureAuthenticated, function(req,res) {
+router.post('/', authentication_check.ensureAuthenticated, function(req,res) {
   var object = req.body.post;
 
   Post.create({ body: object.body, author: object.author, originalAuthor: object.originalAuthor }, function (err, post) {
@@ -24,19 +25,12 @@ router.post('/', ensureAuthenticated, function(req,res) {
   })
 });
 
-router.delete('/:post_id', ensureAuthenticated, function(req,res) {
+router.delete('/:post_id', authentication_check.ensureAuthenticated, function(req,res) {
   Post.findByIdAndRemove(req.params.post_id, {}, function(err,post) {
     if (err) return logger.error(err);
     res.status(200).send({});
   });
 });
-
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  return res.status(403).end();  
-}
 
 function handleUserPostsRequest(req, res) {
   Post.find({author: req.query.author}).sort({'date':-1}).exec(function(err, posts){ 

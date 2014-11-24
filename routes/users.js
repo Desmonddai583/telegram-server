@@ -10,6 +10,7 @@ var nconf = require('../config/nconf-config');
 var logger = require('nlogger').logger(module);
 var stripe = require("stripe")(nconf.get('stripe:secret-key'));
 var mailer = require('../utils/mailer');
+var authentication_check = require('../middleware/authentication-check');
 var User = mongoose.model('User');
 
 router.get('/', function(req,res,next) {
@@ -29,7 +30,7 @@ router.get('/', function(req,res,next) {
   }
 });
 
-router.get('/sign_s3', ensureAuthenticated, function(req, res){
+router.get('/sign_s3', authentication_check.ensureAuthenticated, function(req, res){
   var expiration = new Date();
   expiration.setHours(expiration.getHours() + 1);
 
@@ -70,7 +71,7 @@ router.get('/:user_id', function(req,res) {
   });
 });
 
-router.put('/:user_id', ensureAuthenticated, function(req,res) {
+router.put('/:user_id', authentication_check.ensureAuthenticated, function(req,res) {
   var info = req.body;
   User.findOneAndUpdate({id: req.user.id}, {$set: {photo: info.photo, name: info.fullName, email: info.email}}, function(err, user) {
     if (err) { return res.status(500).end(); }
@@ -92,30 +93,30 @@ router.post('/', function(req,res) {
   });
 });
 
-router.post('/follow', ensureAuthenticated, function(req,res) {
+router.post('/follow', authentication_check.ensureAuthenticated, function(req,res) {
   var follow = req.body.followingID;
   
   handleFollowUserRequest(req,res,follow);
 });
 
-router.post('/unfollow', ensureAuthenticated, function(req,res) {
+router.post('/unfollow', authentication_check.ensureAuthenticated, function(req,res) {
   var unfollow = req.body.unfollowingID;
 
   handleUnFollowUserRequest(req,res,unfollow);
 });
 
-router.post('/upgrade_account', ensureAuthenticated, function(req,res) {
+router.post('/upgrade_account', authentication_check.ensureAuthenticated, function(req,res) {
   var upgrade_token = req.body.token;
   var account_email = req.body.email;
 
   handleUpgradeAccountRequest(req,res,upgrade_token,account_email);
 });
 
-router.post('/downgrade_account', ensureAuthenticated, function(req,res) {
+router.post('/downgrade_account', authentication_check.ensureAuthenticated, function(req,res) {
   handleDowngradeAccountRequest(req,res);
 });
 
-router.post('/update_credit_card', ensureAuthenticated, function(req,res) {
+router.post('/update_credit_card', authentication_check.ensureAuthenticated, function(req,res) {
   var updated_token = req.body.token;
 
   handleUpdateCreditCardRequest(req,res,updated_token);
@@ -128,13 +129,6 @@ router.post('/expire_pro_account', function(req,res) {
     res.status(200).end();
   }
 });
-
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  return res.status(403).end();  
-}
 
 function handleLoginRequest(req, res, next) {
   passport.authenticate('local', function(err, user, info) {
