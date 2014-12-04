@@ -25,6 +25,10 @@ userSchema.methods.emberUser = function(current_user) {
   return newUser;
 }
 
+userSchema.methods.comparePassword = function(password, callback) {
+   bcrypt.compare(password, this.password, callback);
+}
+
 userSchema.statics.generateToken = function(n) {
   return generatePassword(n, false)
 };
@@ -34,9 +38,7 @@ userSchema.statics.findByUserId = function(id, callback) {
 }
 
 userSchema.statics.hashPassword = function(object, callback) {
-  bcrypt.genSalt(10, function(err, salt) {
-    bcrypt.hash(object.password, salt, callback);
-  });
+  bcrypt.hash(object.password, 10, callback);
 };
 
 module.exports = userSchema;

@@ -10,12 +10,22 @@ var User = mongoose.model('User');
 
 router.post('/forgotPassword', function(req, res) {
   User.findOne({email: req.body.email}, function(err, user){
-    if (err) return logger.error(err);
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     if (!user) { return res.status(400).send("The user does not exist!"); }
     var token = User.generateToken(10);
     User.findOneAndUpdate({email: req.body.email}, {$set: {token: token}}, function(err, user) {
-      mailer.sendResetPassword(user, function() {
-        if (err) return res.status(500).send(err.message);
+      if (err) { 
+        logger.error(err);
+        return res.status(500).send(err.message);  
+      }
+      mailer.sendResetPassword(user, function(err) {
+        if (err) { 
+          logger.error(err);
+          return res.status(500).send(err.message);  
+        }
         res.status(200).send({});
       });
     });  
@@ -24,7 +34,10 @@ router.post('/forgotPassword', function(req, res) {
 
 router.get('/checkToken', function(req, res){
   User.findOne({token: req.query.token}, function(err, user){
-    if (err) return logger.error(err);
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     if (!user) { return res.status(400).send("The token expired or does not exist!"); }
     res.status(200).send({});
   });
@@ -32,7 +45,10 @@ router.get('/checkToken', function(req, res){
 
 router.post('/resetPassword', function(req, res) {
   User.findOne({token: req.body.token}, function(err, user){
-    if (err) return logger.error(err);
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     if (!user) { return res.status(400).send("The token expired or does not exist!"); }
 
     async.waterfall([
@@ -43,7 +59,10 @@ router.post('/resetPassword', function(req, res) {
         User.findOneAndUpdate({token: req.body.token}, {$set: {password: hash, token: null}}, callback);
       },
     ], function(err, user) {
-      if (err) return logger.error(err);
+      if (err) { 
+        logger.error(err);
+        return res.status(500).send(err.message);  
+      }
       if (!user) { return res.status(400).send("The token expired or does not exist!"); }
       res.status(200).send({});
     }); 

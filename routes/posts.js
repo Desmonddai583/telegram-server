@@ -20,20 +20,30 @@ router.post('/', ensureAuthenticated, function(req,res) {
   var object = req.body.post;
 
   Post.create({ body: object.body, author: object.author, originalAuthor: object.originalAuthor }, function (err, post) {
-    if (err) return logger.error(err);
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({'post': post});
   })
 });
 
 router.delete('/:post_id', ensureAuthenticated, function(req,res) {
   Post.findByIdAndRemove(req.params.post_id, {}, function(err,post) {
-    if (err) return logger.error(err);
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({});
   });
 });
 
 function handleUserPostsRequest(req, res) {
   Post.find({author: req.query.author}).sort({'date':-1}).exec(function(err, posts){ 
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({'posts': posts});
   });
 };
@@ -55,10 +65,7 @@ function handleDashboardPostsRequest(req, res) {
         logger.error(err);
         return res.status(500).send(err.message);
       }
-      var newUsers = [];
-      results.users.forEach(function(user) {
-        newUsers.push(user.emberUser(req.user));
-      }); 
+      var newUsers = results.users.map(function(user) { return user.emberUser(req.user); });
       res.status(200).send({'posts': results.posts, 'users': newUsers});
     });
   }

@@ -12,7 +12,6 @@ module.exports = function(app) {
   app.set('view engine', 'jade');
   app.set('views', __dirname + "/views" );
 
-  app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
   app.use(cookieParser());
   app.use(session({ secret: 'desmond.dai',

@@ -5,7 +5,10 @@ var userSchema = require('./schemas/user');
 var postSchema = require('./schemas/post');
 
 function defaultConnection() {
-  mongoose.connect('mongodb://' + nconf.get('mongodb:host') + '/' + nconf.get('mongodb:database'));
+  mongoose.connect('mongodb://' + 
+    nconf.get('mongodb:host') + '/' +
+    nconf.get('mongodb:database')
+  );
 
   var db = mongoose.connection;
   db.on('error', console.error.bind(console, 'connection error:'));

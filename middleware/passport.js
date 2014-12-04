@@ -41,7 +41,7 @@ function initPassport() {
 
 function validateUser(user, password, callback) {
   if (user) { 
-    bcrypt.compare(password, user.password, function(err, res) {
+    user.comparePassword(password, function(err, res) {
       if (res) {
         callback(null, user);
       } else {

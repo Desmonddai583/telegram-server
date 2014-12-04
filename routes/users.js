@@ -65,7 +65,10 @@ router.get('/sign_s3', ensureAuthenticated, function(req, res){
 
 router.get('/:user_id', function(req,res) {
   User.findById(req.params.user_id, function(err, user) {
-    if (err) { return res.status(500).end(); }
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     if (!user) { return res.status(400).send("Can not found the user"); }
     res.status(200).send({"user": user.emberUser(req.user)});
   });
@@ -74,7 +77,10 @@ router.get('/:user_id', function(req,res) {
 router.put('/:user_id', ensureAuthenticated, function(req,res) {
   var info = req.body;
   User.findOneAndUpdate({id: req.user.id}, {$set: {photo: info.photo, name: info.fullName, email: info.email}}, function(err, user) {
-    if (err) { return res.status(500).end(); }
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({"user": user.emberUser(user)});
   });
 });
@@ -83,10 +89,21 @@ router.post('/', function(req,res) {
   var object = req.body.user;
 
   User.hashPassword(object, function(err, hash) {
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     var newUser = new User({ id: object.id, password: hash, name: object.name, email: object.email, photo: 'images/avatar1.png' });
     newUser.save(function (err, user) {
-      if (err) return logger.error(err);
+      if (err) { 
+        logger.error(err);
+        return res.status(500).send(err.message);  
+      }
       req.logIn(newUser, function(err) {
+        if (err) { 
+          logger.error(err);
+          return res.status(500).send(err.message);  
+        }
         return res.status(200).send({"users": [user.emberUser(newUser)]});
       });
     });
@@ -132,9 +149,16 @@ router.post('/expire_pro_account', function(req,res) {
 
 function handleLoginRequest(req, res, next) {
   passport.authenticate('local', function(err, user, info) {
-    if (err) { return res.status(500).end(); }
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     if (!user) { return res.status(400).send(info.message); } 
     req.logIn(user, function(err) {
+      if (err) { 
+        logger.error(err);
+        return res.status(500).send(err.message);  
+      }
       return res.status(200).send({"users": [user.emberUser(user)]});
     }); 
   })(req, res, next)
@@ -151,6 +175,10 @@ function handleAuthRequest(req, res) {
 
 function handleFollowersRequest(req, res) {
   User.find({following: req.query.user}, function(err, followers){
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     var users = [];
     followers.forEach(function(user) {
       users.push(user.emberUser(req.user));
@@ -161,6 +189,10 @@ function handleFollowersRequest(req, res) {
 
 function handleFollowingRequest(req, res) {
   User.find({followers: req.query.user}, function(err, following){
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     var users = [];
     following.forEach(function(user) {
       users.push(user.emberUser(req.user));
@@ -190,7 +222,10 @@ function handleFollowUserRequest(req,res,follow) {
      });   
     }
   ], function(err) {
-    if (err) return res.status(500).end();
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({});
   });
 }
@@ -216,7 +251,10 @@ function handleUnFollowUserRequest(req,res,unfollow) {
       }); 
     }
   ], function(err) {
-    if (err) return res.status(500).end();
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({});
   });
 }
@@ -258,7 +296,10 @@ function handleUpgradeAccountRequest(req,res,upgrade_token,account_email) {
       });
     }
   ], function(err) {
-    if (err) return res.status(500).send(err.message);
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({});
   });
 }
@@ -287,7 +328,10 @@ function handleDowngradeAccountRequest(req,res) {
       }); 
     }
   ], function(err) {
-    if (err) return res.status(500).end(err.message);
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({});
   });
 }
@@ -296,7 +340,10 @@ function handleUpdateCreditCardRequest(req,res,updated_token) {
   stripe.customers.update(req.user.stripeCustomerID, {
     card: updated_token
   }, function(err, customer) {
-    if(err) {logger.error(err);}
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     res.status(200).send({});
   });
 }
@@ -325,9 +372,15 @@ function handleExpireProAccountRequest(req,res) {
       }); 
     }
   ], function(err, result) {
-    if (err) res.status(500).end(err.message);
+    if (err) { 
+      logger.error(err);
+      return res.status(500).send(err.message);  
+    }
     mailer.sendExpireProAccount(result[1], function(err) {
-      if (err) res.status(500).end(err.message);
+      if (err) { 
+        logger.error(err);
+        return res.status(500).send(err.message);  
+      }
       res.status(200).send({});
     });
   });
