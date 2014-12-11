@@ -64,7 +64,7 @@ router.get('/sign_s3', ensureAuthenticated, function(req, res){
 });
 
 router.get('/:user_id', function(req,res) {
-  User.findById(req.params.user_id, function(err, user) {
+  User.findOne({id: req.params.user_id}, function(err, user) {
     if (err) { 
       logger.error(err);
       return res.status(500).send(err.message);  

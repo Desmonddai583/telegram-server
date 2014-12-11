@@ -25,7 +25,7 @@ router.post('/', ensureAuthenticated, function(req,res) {
       return res.status(500).send(err.message);  
     }
     res.status(200).send({'post': post});
-  })
+  });
 });
 
 router.delete('/:post_id', ensureAuthenticated, function(req,res) {

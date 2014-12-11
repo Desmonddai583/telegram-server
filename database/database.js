@@ -3,6 +3,7 @@ var autoIncrement = require('mongoose-auto-increment');
 var nconf = require('../config/nconf-config');
 var userSchema = require('./schemas/user');
 var postSchema = require('./schemas/post');
+var messageSchema = require('./schemas/message');
 
 function defaultConnection() {
   mongoose.connect('mongodb://' + 
@@ -16,6 +17,8 @@ function defaultConnection() {
   db.model('User', userSchema);
   postSchema.plugin(autoIncrement.plugin, 'Post');
   db.model('Post', postSchema);  
+  messageSchema.plugin(autoIncrement.plugin, 'Message');
+  db.model('Message', messageSchema);
 
   return db;
 }
